@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>EasyMarket</title>
-<meta name="easymarket-version" content="index36-fixed-variants-2026-09-16">
+<meta name="easymarket-version" content="index36-final-variants-stock-2026-09-16">
 <style>html,body{margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif}#em36-loader{min-height:100vh;display:flex;align-items:center;justify-content:center;color:#858b99;font-size:14px}</style>
 </head>
 <body><div id="em36-loader">Загружаем EasyMarket…</div>
@@ -21,72 +21,79 @@ try{
 var busy=false;
 function toast(t){try{if(typeof showToast==='function')showToast(t);else if(window.Telegram?.WebApp?.showPopup)Telegram.WebApp.showPopup({title:'EasyMarket',message:String(t).slice(0,180),buttons:[{id:'ok',type:'ok',text:'OK'}]});}catch(e){}}
 function btn(){return document.getElementById('sellerPublishProductBtn')}
-function addVariant(q,p){
- var box=document.getElementById('em36Variants');if(!box)return;
- var row=document.createElement('div');row.className='em36-v';row.style.cssText='display:grid;grid-template-columns:1fr 1fr 42px;gap:8px;margin-top:8px';
- var qx=document.createElement('input');qx.type='number';qx.min='1';qx.step='1';qx.placeholder='Количество';qx.value=q||'';qx.className='seller-input';qx.style.cssText='width:100%;min-height:44px;font-size:15px;padding:10px;box-sizing:border-box';
- var px=document.createElement('input');px.type='number';px.min='0';px.step='0.01';px.placeholder='Цена, ₽';px.value=p||'';px.className='seller-input';px.style.cssText='width:100%;min-height:44px;font-size:15px;padding:10px;box-sizing:border-box';
- var x=document.createElement('button');x.type='button';x.textContent='×';x.style.cssText='height:44px;border:0;border-radius:10px;background:#b63c4b;color:#fff;font-size:22px';x.onclick=function(){row.remove()};
- row.append(qx,px,x);box.appendChild(row);
+function row(q,p,stock){
+ var r=document.createElement('div');r.className='em36-v';r.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr 42px;gap:7px;margin-top:8px;align-items:center';
+ function inp(ph,val,min){var x=document.createElement('input');x.type='number';x.min=min||'0';x.step='1';x.placeholder=ph;x.value=val??'';x.style.cssText='width:100%;height:46px;box-sizing:border-box;border:1px solid #303542;border-radius:11px;background:#171a23;color:#fff;padding:0 10px;font-size:14px;outline:none';return x}
+ var qx=inp('Количество',q||'','1');
+ var px=inp('Цена, ₽',p||'','0');px.step='0.01';
+ var sx=inp('Остаток',stock??'','0');
+ var del=document.createElement('button');del.type='button';del.textContent='×';del.style.cssText='width:42px;height:46px;border:0;border-radius:11px;background:#b63c4b;color:#fff;font-size:23px';del.onclick=function(){r.remove();syncButton()};
+ r.append(qx,px,sx,del);return r;
 }
-function setupVariants(){
- if(document.getElementById('em36Variants'))return true;
- var anchor=document.getElementById('sellerProductImage');
- if(!anchor)return false;
- var host=anchor.parentElement||anchor;
- var wrap=document.createElement('div');wrap.id='em36VariantWrap';wrap.style.cssText='margin:12px 0 14px;padding:12px;border:1px solid #292e3b;border-radius:14px;background:#11141b';
- wrap.innerHTML='<div style="font-size:15px;font-weight:800">Количество и цена</div><div style="font-size:12px;color:#9298aa;margin:4px 0 8px">Например: 1 шт. — 100 ₽, 2 шт. — 200 ₽, 3 шт. — 300 ₽</div><div id="em36Variants"></div>';
- var add=document.createElement('button');add.type='button';add.textContent='＋ Добавить вариант';add.style.cssText='width:100%;margin-top:10px;min-height:44px;border:0;border-radius:11px;background:#252934;color:#fff;font-weight:700;font-size:14px';add.onclick=function(){addVariant('', '')};
- wrap.appendChild(add);
- host.parentNode.insertBefore(wrap,host);
- addVariant(1,document.getElementById('sellerProductPrice')?.value||'');
+function setup(){
+ if(document.getElementById('em36VariantWrap'))return true;
+ var img=document.getElementById('sellerProductImage');if(!img)return false;
+ var target=img.closest('.form-group,.field,.seller-field')||img.parentElement||img;
+ var wrap=document.createElement('div');wrap.id='em36VariantWrap';wrap.style.cssText='width:100%;box-sizing:border-box;margin:14px 0;padding:14px;border:1px solid #292e3b;border-radius:15px;background:#11141b';
+ var title=document.createElement('div');title.innerHTML='<b style="font-size:16px">Варианты товара</b><div style="font-size:12px;color:#9298aa;margin-top:4px;line-height:1.4">Добавляй сколько угодно вариантов. Например: 1 шт. — 100 ₽, 2 шт. — 180 ₽, 3 шт. — 250 ₽</div>';
+ var head=document.createElement('div');head.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr 42px;gap:7px;margin-top:12px;color:#858b99;font-size:11px;font-weight:700';head.innerHTML='<div>КОЛИЧЕСТВО</div><div>ЦЕНА</div><div>ОСТАТОК</div><div></div>';
+ var list=document.createElement('div');list.id='em36Variants';
+ var add=document.createElement('button');add.type='button';add.textContent='＋ Добавить вариант';add.style.cssText='width:100%;height:48px;margin-top:10px;border:0;border-radius:12px;background:#252934;color:#fff;font-size:15px;font-weight:800';
+ add.onclick=function(){list.appendChild(row('','','1'));syncButton()};
+ wrap.append(title,head,list,add);target.parentNode.insertBefore(wrap,target);
+ list.appendChild(row('1','','1'));
  return true;
 }
 function getVariants(){
- return Array.from(document.querySelectorAll('#em36Variants .em36-v')).map(function(r){return{qty:Number(r.children[0].value),price:Number(r.children[1].value)}}).filter(function(v){return Number.isFinite(v.qty)&&v.qty>0&&Number.isFinite(v.price)&&v.price>=0}).sort(function(a,b){return a.qty-b.qty}).filter(function(v,i,a){return i===0||a[i-1].qty!==v.qty});
+ return Array.from(document.querySelectorAll('#em36Variants .em36-v')).map(function(r){return{quantity:Math.floor(Number(r.children[0].value)),price:Number(r.children[1].value),stock:Math.floor(Number(r.children[2].value))}}).filter(function(v){return Number.isFinite(v.quantity)&&v.quantity>0&&Number.isFinite(v.price)&&v.price>=0&&Number.isFinite(v.stock)&&v.stock>0});
+}
+function syncButton(){
+ var b=btn();if(!b)return;var name=(document.getElementById('sellerProductName')?.value||'').trim();var file=document.getElementById('sellerProductImage')?.files?.[0];var ok=!!name&&!!file&&getVariants().length>0&&!busy;b.disabled=!ok;b.style.cssText+=';width:100%!important;min-height:52px!important;height:52px!important;padding:14px!important;border-radius:13px!important;font-size:16px!important;font-weight:800!important;box-sizing:border-box!important;display:block!important;opacity:1!important;pointer-events:auto!important';b.style.setProperty('background',ok?'#6c63ff':'#666b75','important');b.style.setProperty('color','#fff','important')
 }
 function imageToData(file){return new Promise(function(resolve,reject){var fr=new FileReader();fr.onerror=function(){reject(new Error('Фото не читается'))};fr.onload=function(){var img=new Image();img.onerror=function(){reject(new Error('Фото не обрабатывается'))};img.onload=function(){var max=900,s=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*s));c.height=Math.max(1,Math.round(img.height*s));c.getContext('2d').drawImage(img,0,0,c.width,c.height);resolve(c.toDataURL('image/jpeg',.7))};img.src=fr.result};fr.readAsDataURL(file)})}
 async function publish(e){
  if(e){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()}
- if(busy)return false;busy=true;
- var b=btn();if(b){b.textContent='Публикуем…';b.disabled=true;b.style.cssText+=';opacity:1!important;pointer-events:auto!important;background:#6c63ff!important;color:#fff!important'}
+ if(busy)return false;
+ var vs=getVariants();
+ var b=btn();
+ var me=await getMyUserRecord();
+ if(!me?.is_seller){toast('Нет прав продавца');return false}
+ var name=(document.getElementById('sellerProductName')?.value||'').trim();
+ var description=(document.getElementById('sellerProductDescription')?.value||'').trim();
+ var details=(document.getElementById('sellerProductDetails')?.value||'').trim();
+ var file=document.getElementById('sellerProductImage')?.files?.[0];
+ if(!name){toast('Введите название');return false}
+ if(!vs.length){toast('Заполни количество, цену и остаток хотя бы для одного варианта');return false}
+ if(!file){toast('Добавьте фото товара');return false}
+ busy=true;if(b){b.disabled=true;b.textContent='Публикуем…';b.style.setProperty('background','#666b75','important');b.style.setProperty('width','100%','important');b.style.setProperty('min-height','52px','important');b.style.setProperty('height','52px','important')}
  try{
-  var me=await getMyUserRecord();
-  if(!me||!me.is_seller){toast('Нет прав продавца');return false}
-  var name=(document.getElementById('sellerProductName')?.value||'').trim();
-  var description=(document.getElementById('sellerProductDescription')?.value||'').trim();
-  var details=(document.getElementById('sellerProductDetails')?.value||'').trim();
-  var file=document.getElementById('sellerProductImage')?.files?.[0];
-  var vs=getVariants();
-  if(!name){toast('Введите название');return false}
-  if(!vs.length){toast('Добавьте вариант количества и цены');return false}
-  if(!file){toast('Добавьте фото товара');return false}
-  toast('Обрабатываем фото…');
   var imageUrl=await imageToData(file);
-  var first=vs[0], maxQty=Math.max.apply(null,vs.map(function(v){return v.qty}));
-  var text='Варианты количества и цены:\n'+vs.map(function(v){return v.qty+' шт. — '+v.price+' ₽'}).join('\n');
-  var payload={name:name,description:description,details:(details?details+'\n\n':'')+text,price:Math.round(first.price),icon:document.getElementById('sellerProductIcon')?.value?.trim()||'📦',category:document.getElementById('sellerProductCategory')?.value||'other',image_url:imageUrl,seller_id:Number(me.telegram_id),seller_username:me.username?String(me.username).replace(/^@/,''):null,stock:Math.floor(maxQty),approval_status:'pending'};
+  var first=vs[0];
+  var maxStock=vs.reduce(function(s,v){return s+v.stock},0);
+  var text='Варианты количества и цены:\n'+vs.map(function(v){return v.quantity+' шт. — '+v.price+' ₽ (остаток: '+v.stock+')'}).join('\n');
+  var payload={name,description,details:(details?details+'\n\n':'')+text,price:Math.round(first.price),icon:document.getElementById('sellerProductIcon')?.value?.trim()||'📦',category:document.getElementById('sellerProductCategory')?.value||'other',image_url:imageUrl,seller_id:Number(me.telegram_id),seller_username:me.username?String(me.username).replace(/^@/,''):null,stock:maxStock,price_options:vs,approval_status:'pending'};
   var ins=await supabaseClient.from('products').insert(payload).select('*').single();
   if(ins.error)throw ins.error;
   toast('Товар отправлен на проверку 🕐');
   try{await notifySellerProductStatus(ins.data,'pending')}catch(x){console.error(x)}
   ['sellerProductName','sellerProductDescription','sellerProductDetails','sellerProductPrice'].forEach(function(id){var el=document.getElementById(id);if(el)el.value=''});
   var im=document.getElementById('sellerProductImage');if(im)im.value='';
-  var vb=document.getElementById('em36Variants');if(vb)vb.innerHTML='';addVariant(1,'');
+  var vb=document.getElementById('em36Variants');if(vb){vb.innerHTML='';vb.appendChild(row('1','','1'))}
   try{if(typeof loadProducts==='function')await loadProducts()}catch(x){console.error(x)}
   try{if(typeof loadSellerDashboard==='function')await loadSellerDashboard()}catch(x){console.error(x)}
  }catch(err){console.error('EM36',err);toast('Ошибка публикации: '+(err?.message||'неизвестная ошибка'))}
- finally{busy=false;if(b){b.disabled=false;b.textContent='Опубликовать товар';b.style.removeProperty('background');}}
+ finally{busy=false;if(b){b.textContent='Опубликовать товар'}syncButton()}
  return false;
 }
 function arm(){
- setupVariants();
+ if(!setup())return;
  var b=btn();if(!b)return;
- if(b.dataset.em36Armed==='1')return;
- b.dataset.em36Armed='1';b.type='button';
- b.addEventListener('click',publish,true);
+ if(b.dataset.em36Armed!=='1'){b.dataset.em36Armed='1';b.type='button';b.addEventListener('click',publish,true)}
+ ['sellerProductName','sellerProductImage'].forEach(function(id){var el=document.getElementById(id);if(el&&!el.dataset.em36Input){el.dataset.em36Input='1';el.addEventListener('input',syncButton);el.addEventListener('change',syncButton)}});
+ syncButton();
 }
 new MutationObserver(arm).observe(document.documentElement,{childList:true,subtree:true});
+setInterval(arm,300);
 arm();
 })();`;
  doc.body.appendChild(patch);
