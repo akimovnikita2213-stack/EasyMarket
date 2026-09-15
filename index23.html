@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>EasyMarket</title>
+</head>
+<body>
+<script>
+(async function () {
+  const SOURCE = 'https://raw.githubusercontent.com/akimovnikita2213-stack/EasyMarket/refs/heads/main/index22.html';
+  try {
+    const r = await fetch(SOURCE + '?v=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    let html = await r.text();
+
+    // Убираем только блок product.details из КАРТОЧКИ товара.
+    // Цена и кнопка «⚡ Оформить» не меняются.
+    html = html.replace(
+      /\s*\$\{product\.details \? `\s*<div class="product-details">[\s\S]*?<\/div>\s*` : ""\}/,
+      ''
+    );
+
+    document.open();
+    document.write(html);
+    document.close();
+  } catch (e) {
+    document.body.innerHTML = '<div style="font-family:Arial;padding:20px">Не удалось загрузить EasyMarket.<br><br>' + String(e) + '</div>';
+  }
+})();
+</script>
+</body>
+</html>
