@@ -4,110 +4,103 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>EasyMarket</title>
-<meta name="easymarket-version" content="index35-seller-button-fix-2026-09-16">
-<style>html,body{margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif}#em35-loader{min-height:100vh;display:flex;align-items:center;justify-content:center;color:#858b99;font-size:14px}</style>
+<meta name="easymarket-version" content="index35-seller-form-hotfix-2026-09-16-3">
+<style>
+html,body{margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif}
+#em35-loader{min-height:100vh;display:flex;align-items:center;justify-content:center;color:#858b99;font-size:14px}
+</style>
 </head>
 <body>
 <div id="em35-loader">Загружаем EasyMarket…</div>
 <script>
 (async()=>{
-  try{
-    const src=new URL('index34.html',location.href).href;
-    const response=await fetch(src,{cache:'no-store'});
-    if(!response.ok)throw new Error('Не удалось загрузить index34.html');
-    const html=await response.text();
-    const doc=new DOMParser().parseFromString(html,'text/html');
-
-    const patch=doc.createElement('script');
-    patch.textContent=`
+try{
+ const src=new URL('index34.html',location.href).href;
+ const r=await fetch(src,{cache:'no-store'});
+ if(!r.ok)throw new Error('Не удалось загрузить index34.html');
+ const html=await r.text();
+ const doc=new DOMParser().parseFromString(html,'text/html');
+ const patch=doc.createElement('script');
+ patch.textContent=`
 (function(){
-  // Работаем именно с кнопкой продавца по её реальному тексту/контексту,
-  // а не полагаемся на конкретный id.
-  const state={busy:false};
-
-  function isSellerPublishButton(el){
-    if(!el || el.tagName!=='BUTTON') return false;
-    const text=(el.textContent||'').replace(/\\s+/g,' ').trim().toLowerCase();
-    if(text.includes('опубликовать товар')) return true;
-    if(el.id==='sellerPublishProductBtn') return true;
-    const form=el.closest('form');
-    if(form){
-      const f=(form.textContent||'').toLowerCase();
-      if(f.includes('название') && f.includes('цена') && f.includes('товар')) return true;
+  var busy=false;
+  function sellerButton(){
+    var b=document.getElementById('sellerPublishProductBtn');
+    if(b)return b;
+    var root=document.getElementById('sellerProductForm');
+    if(root){
+      var bs=root.querySelectorAll('button');
+      for(var i=0;i<bs.length;i++){if(/опубликовать товар/i.test((bs[i].textContent||'').trim()))return bs[i];}
     }
-    return false;
+    var all=document.querySelectorAll('button');
+    for(var j=0;j<all.length;j++){if(/опубликовать товар/i.test((all[j].textContent||'').trim()))return all[j];}
+    return null;
   }
-
-  function getSellerButtons(){
-    return Array.from(document.querySelectorAll('button')).filter(isSellerPublishButton);
+  function paint(b,on){
+    if(!b)return;
+    if(on){
+      if(!b.dataset.em35Text)b.dataset.em35Text=b.textContent||'Опубликовать товар';
+      b.disabled=true;b.textContent='Ожидайте…';
+      b.style.setProperty('background','#666b75','important');
+      b.style.setProperty('color','#fff','important');
+      b.style.setProperty('opacity','1','important');
+      b.style.setProperty('pointer-events','none','important');
+      b.style.setProperty('width','100%','important');
+      b.style.setProperty('min-height','54px','important');
+      b.style.setProperty('font-size','17px','important');
+      b.style.setProperty('font-weight','800','important');
+      b.style.setProperty('border-radius','14px','important');
+    }else{
+      b.disabled=false;b.textContent=b.dataset.em35Text||'Опубликовать товар';
+      b.style.removeProperty('background');b.style.removeProperty('color');b.style.removeProperty('opacity');b.style.removeProperty('pointer-events');
+    }
   }
-
-  function markWaiting(btn){
-    if(!btn || btn.dataset.em35Waiting==='1') return;
-    btn.dataset.em35Waiting='1';
-    btn.dataset.em35OriginalText=btn.textContent||'Опубликовать товар';
-    btn.disabled=true;
-    btn.style.background='#666b75';
-    btn.style.borderColor='#666b75';
-    btn.style.color='#fff';
-    btn.style.opacity='1';
-    btn.style.cursor='wait';
-    btn.style.pointerEvents='none';
-    btn.textContent='Ожидайте…';
+  function ensureSellerFields(){
+    var form=document.getElementById('sellerProductForm');
+    if(!form)return;
+    var price=document.getElementById('sellerProductPrice');
+    var stock=document.getElementById('sellerProductStock');
+    if(price){price.type='number';price.min='0';price.step='0.01';price.placeholder='Цена, ₽';price.style.cssText+=';width:100%;min-height:46px;font-size:16px;';}
+    if(stock){stock.type='number';stock.min='1';stock.step='1';if(!stock.value||Number(stock.value)<1)stock.value='1';stock.placeholder='Количество';stock.style.cssText+=';width:100%;min-height:46px;font-size:16px;';}
+    var row=price&&stock?price.parentElement:null;
+    if(row){row.style.cssText+=';display:grid;grid-template-columns:1fr 1fr;gap:10px;';
+      if(!row.querySelector('.em35-price-label')){var p=document.createElement('div');p.className='em35-price-label';p.style.cssText='font-size:12px;font-weight:800;color:#aeb3bf;margin-bottom:-5px';p.textContent='Цена за товар, ₽';price.parentElement.insertBefore(p,price);}
+      if(!row.querySelector('.em35-stock-label')){var s=document.createElement('div');s.className='em35-stock-label';s.style.cssText='font-size:12px;font-weight:800;color:#aeb3bf;margin-bottom:-5px';s.textContent='Количество, шт.';stock.parentElement.insertBefore(s,stock);}
+    }
   }
-
-  // Самое важное: capture-событие срабатывает раньше обычного onclick/submit,
-  // поэтому кнопка визуально меняется МГНОВЕННО, даже если публикация потом долго ждёт Supabase/Telegram.
-  function captureClick(event){
-    const btn=event.target?.closest?.('button');
-    if(!btn || !isSellerPublishButton(btn)) return;
-    if(state.busy) return;
-    state.busy=true;
-    markWaiting(btn);
-    setTimeout(()=>{state.busy=false;},15000);
+  function arm(){
+    ensureSellerFields();
+    var b=sellerButton();
+    if(!b)return;
+    b.type='button';
+    b.style.setProperty('width','100%','important');
+    b.style.setProperty('min-height','54px','important');
+    b.style.setProperty('font-size','17px','important');
+    b.style.setProperty('font-weight','800','important');
+    if(b.dataset.em35Capture!=='1'){
+      b.dataset.em35Capture='1';
+      b.addEventListener('pointerdown',function(){if(!busy){busy=true;paint(b,true);}},true);
+      b.addEventListener('touchstart',function(){if(!busy){busy=true;paint(b,true);}},true);
+      b.addEventListener('click',async function(e){
+        e.preventDefault();e.stopImmediatePropagation();
+        if(!busy)busy=true;
+        paint(b,true);
+        var fn=window.saveSellerProduct;
+        if(typeof fn!=='function'){paint(b,false);busy=false;return;}
+        try{
+          await fn(e);
+        }catch(err){console.error(err);}
+        setTimeout(function(){paint(b,false);busy=false;},350);
+      },true);
+    }
   }
-
-  function captureSubmit(event){
-    const form=event.target;
-    if(!form || form.tagName!=='FORM') return;
-    const submitter=event.submitter;
-    const btn=(submitter&&isSellerPublishButton(submitter))
-      ? submitter
-      : getSellerButtons().find(b=>b.closest('form')===form);
-    if(!btn) return;
-    if(state.busy) return;
-    state.busy=true;
-    markWaiting(btn);
-    setTimeout(()=>{state.busy=false;},15000);
-  }
-
-  document.addEventListener('click',captureClick,true);
-  document.addEventListener('submit',captureSubmit,true);
-
-  function decorate(){
-    getSellerButtons().forEach(btn=>{
-      if(btn.dataset.em35Decorated==='1') return;
-      btn.dataset.em35Decorated='1';
-      btn.style.minHeight='54px';
-      btn.style.width='100%';
-      btn.style.fontSize='17px';
-      btn.style.fontWeight='800';
-      btn.style.borderRadius='13px';
-    });
-  }
-
-  decorate();
-  new MutationObserver(decorate).observe(document.documentElement,{childList:true,subtree:true});
-  setInterval(decorate,500);
+  arm();
+  new MutationObserver(arm).observe(document.documentElement,{childList:true,subtree:true});
+  setInterval(arm,500);
 })();`;
-
-    doc.body.appendChild(patch);
-    document.open();
-    document.write('<!DOCTYPE html>'+doc.documentElement.outerHTML);
-    document.close();
-  }catch(err){
-    document.body.innerHTML='<div style="padding:30px;text-align:center;color:#fff">Ошибка загрузки EasyMarket<br><small style="color:#888">'+String(err.message||err)+'</small></div>';
-  }
+ doc.body.appendChild(patch);
+ document.open();document.write('<!DOCTYPE html>'+doc.documentElement.outerHTML);document.close();
+}catch(e){document.body.innerHTML='<div style="padding:30px;text-align:center;color:#fff">Ошибка загрузки EasyMarket<br><small style="color:#888">'+String(e.message||e)+'</small></div>';}
 })();
 </script>
 </body>
