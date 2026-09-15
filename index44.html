@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>EasyMarket</title>
+</head>
+<body style="margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif">
+<div id="root"></div>
+<script>
+(async()=>{
+ try{
+  const r=await fetch('./index34.html?build=44_'+Date.now(),{cache:'no-store'});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const html=await r.text();
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  document.head.innerHTML+=doc.head.innerHTML;
+  document.getElementById('root').innerHTML=doc.body.innerHTML;
+  doc.body.querySelectorAll('script').forEach(old=>{const s=document.createElement('script');[...old.attributes].forEach(a=>s.setAttribute(a.name,a.value));s.textContent=old.textContent;document.body.appendChild(s)});
+  setTimeout(()=>{
+   const st=document.createElement('style');st.textContent=`#sellerPublishProductBtn{width:100%!important;min-height:54px!important;height:54px!important;padding:14px 16px!important;border-radius:13px!important;font-size:16px!important;font-weight:800!important;display:block!important;box-sizing:border-box!important}#em44Variants{margin:14px 0;padding:14px;background:#12151c;border:1px solid #292d38;border-radius:16px}.em44row{display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:7px;margin-bottom:8px}.em44row input{width:100%;min-width:0;padding:11px;border-radius:10px;border:1px solid #303542;background:#191c25;color:#fff;box-sizing:border-box}.em44del,.em44add{border:0;border-radius:10px;background:#252934;color:#fff}.em44add{width:100%;height:44px;font-weight:800}`;document.head.appendChild(st);
+   const btn=document.getElementById('sellerPublishProductBtn'),photo=document.getElementById('sellerProductImage');
+   if(btn&&photo&&!document.getElementById('em44Variants')){
+    const w=document.createElement('div');w.id='em44Variants';w.innerHTML='<b style="display:block;margin-bottom:10px">Варианты товара</b><div id="em44list"></div><button id="em44add" class="em44add" type="button">＋ Добавить вариант</button><div style="color:#8d93a2;font-size:12px;margin-top:7px">Количество • Цена ₽ • Остаток</div>';photo.parentNode.insertBefore(w,photo);
+    const list=document.getElementById('em44list'),add=document.getElementById('em44add');
+    function row(q='',p='',s='1'){const x=document.createElement('div');x.className='em44row';x.innerHTML='<input type="number" min="1" placeholder="Количество" value="'+q+'"><input type="number" min="0" step="1" placeholder="Цена ₽" value="'+p+'"><input type="number" min="1" placeholder="Остаток" value="'+s+'"><button class="em44del" type="button">×</button>';x.querySelector('button').onclick=()=>{if(list.children.length>1)x.remove()};list.appendChild(x)}row(1,'','1');add.onclick=()=>row();btn.type='button';
+   }
+  },500);
+ }catch(e){document.getElementById('root').innerHTML='<div style="padding:30px">Ошибка загрузки EasyMarket</div>'}
+})();
+</script>
+</body>
+</html>
