@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>EasyMarket</title>
-<meta name="easymarket-version" content="index35-seller-form-hotfix-2026-09-16-3">
+<meta name="easymarket-version" content="index35-seller-variants-publish-fix-2026-09-16">
 <style>
 html,body{margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif}
 #em35-loader{min-height:100vh;display:flex;align-items:center;justify-content:center;color:#858b99;font-size:14px}
@@ -24,6 +24,8 @@ try{
  patch.textContent=`
 (function(){
   var busy=false;
+  var pollTimer=null;
+
   function sellerButton(){
     var b=document.getElementById('sellerPublishProductBtn');
     if(b)return b;
@@ -32,29 +34,9 @@ try{
       var bs=root.querySelectorAll('button');
       for(var i=0;i<bs.length;i++){if(/опубликовать товар/i.test((bs[i].textContent||'').trim()))return bs[i];}
     }
-    var all=document.querySelectorAll('button');
-    for(var j=0;j<all.length;j++){if(/опубликовать товар/i.test((all[j].textContent||'').trim()))return all[j];}
     return null;
   }
-  function paint(b,on){
-    if(!b)return;
-    if(on){
-      if(!b.dataset.em35Text)b.dataset.em35Text=b.textContent||'Опубликовать товар';
-      b.disabled=true;b.textContent='Ожидайте…';
-      b.style.setProperty('background','#666b75','important');
-      b.style.setProperty('color','#fff','important');
-      b.style.setProperty('opacity','1','important');
-      b.style.setProperty('pointer-events','none','important');
-      b.style.setProperty('width','100%','important');
-      b.style.setProperty('min-height','54px','important');
-      b.style.setProperty('font-size','17px','important');
-      b.style.setProperty('font-weight','800','important');
-      b.style.setProperty('border-radius','14px','important');
-    }else{
-      b.disabled=false;b.textContent=b.dataset.em35Text||'Опубликовать товар';
-      b.style.removeProperty('background');b.style.removeProperty('color');b.style.removeProperty('opacity');b.style.removeProperty('pointer-events');
-    }
-  }
+
   function ensureSellerFields(){
     var form=document.getElementById('sellerProductForm');
     if(!form)return;
@@ -63,40 +45,115 @@ try{
     if(price){price.type='number';price.min='0';price.step='0.01';price.placeholder='Цена, ₽';price.style.cssText+=';width:100%;min-height:46px;font-size:16px;';}
     if(stock){stock.type='number';stock.min='1';stock.step='1';if(!stock.value||Number(stock.value)<1)stock.value='1';stock.placeholder='Количество';stock.style.cssText+=';width:100%;min-height:46px;font-size:16px;';}
     var row=price&&stock?price.parentElement:null;
-    if(row){row.style.cssText+=';display:grid;grid-template-columns:1fr 1fr;gap:10px;';
-      if(!row.querySelector('.em35-price-label')){var p=document.createElement('div');p.className='em35-price-label';p.style.cssText='font-size:12px;font-weight:800;color:#aeb3bf;margin-bottom:-5px';p.textContent='Цена за товар, ₽';price.parentElement.insertBefore(p,price);}
-      if(!row.querySelector('.em35-stock-label')){var s=document.createElement('div');s.className='em35-stock-label';s.style.cssText='font-size:12px;font-weight:800;color:#aeb3bf;margin-bottom:-5px';s.textContent='Количество, шт.';stock.parentElement.insertBefore(s,stock);}
+    if(row){
+      row.style.cssText+=';display:grid;grid-template-columns:1fr 1fr;gap:10px;';
+      if(!row.querySelector('.em35-field-box')){
+        var pbox=document.createElement('div');
+        var sbox=document.createElement('div');
+        pbox.className='em35-field-box';sbox.className='em35-field-box';
+        pbox.style.cssText='display:grid;gap:5px;';sbox.style.cssText='display:grid;gap:5px;';
+        var pl=document.createElement('div');pl.textContent='Цена за 1 шт., ₽';pl.style.cssText='font-size:12px;font-weight:800;color:#aeb3bf';
+        var sl=document.createElement('div');sl.textContent='Общий запас, шт.';sl.style.cssText='font-size:12px;font-weight:800;color:#aeb3bf';
+        row.replaceChildren(pbox,sbox);pbox.append(price);sbox.append(stock);pbox.prepend(pl);sbox.prepend(sl);
+      }
+    }
+
+    if(document.getElementById('em35-price-options'))return;
+    var title=document.createElement('div');
+    title.textContent='Количество и цена';
+    title.style.cssText='font-size:14px;font-weight:900;margin-top:4px;color:#fff';
+    var hint=document.createElement('div');
+    hint.textContent='Например: 1 шт. — 100 ₽, 2 шт. — 200 ₽, 3 шт. — 300 ₽';
+    hint.style.cssText='font-size:11px;color:#9298aa;line-height:1.4';
+    var box=document.createElement('div');
+    box.id='em35-price-options';
+    box.style.cssText='display:grid;gap:8px;margin-top:2px';
+    var add=document.createElement('button');
+    add.type='button';add.textContent='＋ Добавить вариант';
+    add.className='seller-action secondary';add.style.cssText+=';width:100%;';
+    add.onclick=function(){addVariantRow('', '');};
+    form.insertBefore(title, document.getElementById('sellerProductImage'));
+    form.insertBefore(hint, document.getElementById('sellerProductImage'));
+    form.insertBefore(box, document.getElementById('sellerProductImage'));
+    form.insertBefore(add, document.getElementById('sellerProductImage'));
+    addVariantRow(1, price && price.value ? price.value : '');
+  }
+
+  function addVariantRow(qty,price){
+    var box=document.getElementById('em35-price-options');if(!box)return;
+    var row=document.createElement('div');row.className='em35-variant-row';row.style.cssText='display:grid;grid-template-columns:1fr 1fr 42px;gap:8px;align-items:center';
+    var q=document.createElement('input');q.type='number';q.min='1';q.step='1';q.placeholder='Количество';q.value=qty||'';q.className='seller-input em35-qty';q.style.cssText+=';min-height:44px;font-size:15px;';
+    var p=document.createElement('input');p.type='number';p.min='0';p.step='0.01';p.placeholder='Цена, ₽';p.value=price||'';p.className='seller-input em35-price';p.style.cssText+=';min-height:44px;font-size:15px;';
+    var del=document.createElement('button');del.type='button';del.textContent='×';del.className='seller-action danger';del.style.cssText+=';height:44px;padding:0;';del.onclick=function(){if(box.querySelectorAll('.em35-variant-row').length>1)row.remove();};
+    row.append(q,p,del);box.append(row);
+  }
+
+  function prepareVariantData(){
+    var rows=[].slice.call(document.querySelectorAll('#em35-price-options .em35-variant-row'));
+    var opts=rows.map(function(r){return {qty:Number(r.querySelector('.em35-qty')?.value),price:Number(r.querySelector('.em35-price')?.value)}})
+      .filter(function(x){return Number.isFinite(x.qty)&&x.qty>0&&Number.isFinite(x.price)&&x.price>=0})
+      .sort(function(a,b){return a.qty-b.qty});
+    var unique=[];opts.forEach(function(x){if(!unique.some(function(y){return y.qty===x.qty}))unique.push(x);});
+    if(!unique.length){
+      var base=Number(document.getElementById('sellerProductPrice')?.value||0);
+      unique=[{qty:1,price:Number.isFinite(base)&&base>=0?base:0}];
+    }
+    var basePrice=document.getElementById('sellerProductPrice');
+    var stock=document.getElementById('sellerProductStock');
+    if(basePrice)basePrice.value=String(unique[0].price);
+    if(stock){var maxQty=Math.max.apply(null,unique.map(function(x){return x.qty}));if(maxQty>0)stock.value=String(Math.floor(maxQty));}
+    var details=document.getElementById('sellerProductDetails');
+    if(details){
+      var clean=String(details.value||'').replace(/\\s*<!--EM_PRICES:.*?-->\\s*/g,'').trim();
+      details.value=clean+'\\n<!--EM_PRICES:'+JSON.stringify(unique)+'-->';
     }
   }
+
+  function paintBusy(b,on){
+    if(!b)return;
+    if(on){
+      if(!b.dataset.em35Text)b.dataset.em35Text=b.textContent||'Опубликовать товар';
+      b.textContent='Публикуем…';
+      b.style.setProperty('background','#666b75','important');
+      b.style.setProperty('color','#fff','important');
+      b.style.setProperty('opacity','1','important');
+      b.style.setProperty('width','100%','important');
+      b.style.setProperty('min-height','54px','important');
+      b.style.setProperty('font-size','17px','important');
+      b.style.setProperty('font-weight','800','important');
+    }else if(!b.disabled){
+      b.textContent=b.dataset.em35Text||'Опубликовать товар';
+      b.style.removeProperty('background');b.style.removeProperty('color');b.style.removeProperty('opacity');
+    }
+  }
+
   function arm(){
     ensureSellerFields();
-    var b=sellerButton();
-    if(!b)return;
-    b.type='button';
-    b.style.setProperty('width','100%','important');
-    b.style.setProperty('min-height','54px','important');
-    b.style.setProperty('font-size','17px','important');
-    b.style.setProperty('font-weight','800','important');
-    if(b.dataset.em35Capture!=='1'){
-      b.dataset.em35Capture='1';
-      b.addEventListener('pointerdown',function(){if(!busy){busy=true;paint(b,true);}},true);
-      b.addEventListener('touchstart',function(){if(!busy){busy=true;paint(b,true);}},true);
-      b.addEventListener('click',async function(e){
-        e.preventDefault();e.stopImmediatePropagation();
-        if(!busy)busy=true;
-        paint(b,true);
-        var fn=window.saveSellerProduct;
-        if(typeof fn!=='function'){paint(b,false);busy=false;return;}
-        try{
-          await fn(e);
-        }catch(err){console.error(err);}
-        setTimeout(function(){paint(b,false);busy=false;},350);
+    var b=sellerButton();if(!b)return;b.type='button';
+    if(b.dataset.em35Window!=='1'){
+      b.dataset.em35Window='1';
+      window.addEventListener('click',function(e){
+        var target=e.target?.closest?.('#sellerPublishProductBtn');
+        if(!target||busy)return;
+        busy=true;
+        prepareVariantData();
+        paintBusy(target,true);
+        if(pollTimer)clearInterval(pollTimer);
+        pollTimer=setInterval(function(){
+          if(!target.disabled){
+            clearInterval(pollTimer);pollTimer=null;busy=false;paintBusy(target,false);
+          }
+          if(!document.body.contains(target)){
+            clearInterval(pollTimer);pollTimer=null;busy=false;
+          }
+        },250);
       },true);
     }
   }
+
   arm();
   new MutationObserver(arm).observe(document.documentElement,{childList:true,subtree:true});
-  setInterval(arm,500);
+  setInterval(arm,700);
 })();`;
  doc.body.appendChild(patch);
  document.open();document.write('<!DOCTYPE html>'+doc.documentElement.outerHTML);document.close();
