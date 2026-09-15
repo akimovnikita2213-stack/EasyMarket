@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>EasyMarket</title>
-<meta name="easymarket-version" content="index35-seller-publish-hotfix-2-2026-09-16">
+<meta name="easymarket-version" content="index35-seller-publish-hotfix-3-2026-09-16">
 <style>html,body{margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif}#em35-loader{min-height:100vh;display:flex;align-items:center;justify-content:center;color:#858b99;font-size:14px}</style>
 </head>
 <body>
@@ -21,9 +21,25 @@
     const patch=doc.createElement('script');
     patch.textContent=`
 (function(){
-  const state={busy:false,installed:false};
+  const state={busy:false};
 
   function getPublishButton(){return document.getElementById('sellerPublishProductBtn');}
+
+  function stylePublishButton(){
+    const b=getPublishButton();
+    if(!b||b.dataset.em35Styled==='1')return;
+    b.dataset.em35Styled='1';
+    b.style.width='100%';
+    b.style.minHeight='58px';
+    b.style.padding='16px 18px';
+    b.style.borderRadius='14px';
+    b.style.fontSize='17px';
+    b.style.fontWeight='800';
+    b.style.border='0';
+    b.style.background='#6c63ff';
+    b.style.color='#fff';
+    b.style.transition='background .15s ease,opacity .15s ease,transform .08s ease';
+  }
 
   function setBusy(on,text){
     const b=getPublishButton();
@@ -32,12 +48,18 @@
       if(!b.dataset.em35OriginalText)b.dataset.em35OriginalText=b.textContent||'Опубликовать товар';
       b.disabled=true;
       b.style.pointerEvents='none';
-      b.style.opacity='.6';
-      b.textContent=text||'Публикуем…';
+      b.style.background='#5b5f68';
+      b.style.color='#d9dce1';
+      b.style.opacity='1';
+      b.style.transform='none';
+      b.textContent=text||'Ожидайте…';
     }else{
       b.disabled=false;
       b.style.pointerEvents='';
-      b.style.opacity='';
+      b.style.background='#6c63ff';
+      b.style.color='#fff';
+      b.style.opacity='1';
+      b.style.transform='';
       b.textContent=b.dataset.em35OriginalText||'Опубликовать товар';
     }
   }
@@ -66,7 +88,9 @@
 
   function attachPublishButton(){
     const b=getPublishButton();
-    if(!b||b.dataset.em35Bound==='1')return;
+    if(!b)return;
+    stylePublishButton();
+    if(b.dataset.em35Bound==='1')return;
     b.dataset.em35Bound='1';
     b.type='button';
     b.onclick=async function(event){
@@ -80,27 +104,20 @@
       }
 
       state.busy=true;
-      setBusy(true,'Публикуем…');
+      setBusy(true,'Ожидайте…');
 
       const originalNotify=window.notifySellerProductStatus;
-      let deferredNotify=null;
-
       try{
-        // Критично: Telegram-уведомление не должно блокировать публикацию.
-        // Оригинальная функция ждёт Edge Function; если Telegram отвечает долго,
-        // UI продавца зависает на десятки секунд. Здесь уведомление запускается
-        // параллельно, а товар и панель обновляются сразу после INSERT.
         if(typeof originalNotify==='function'){
           window.notifySellerProductStatus=async function(){
             const args=arguments;
-            deferredNotify=Promise.resolve().then(()=>originalNotify.apply(this,args)).catch(e=>console.warn('Deferred seller notification:',e));
+            Promise.resolve().then(()=>originalNotify.apply(this,args)).catch(e=>console.warn('Deferred seller notification:',e));
             return {ok:true,deferred:true};
           };
         }
 
         await compressImageInput();
         await window.saveSellerProduct(event);
-        if(typeof window.showToast==='function')window.showToast('Товар отправлен на проверку 🕐');
       }catch(e){
         console.error('EasyMarket seller publish:',e);
         if(typeof window.showToast==='function')window.showToast('Не удалось выставить товар: '+(e?.message||'ошибка'));
@@ -114,8 +131,6 @@
 
   function install(){
     attachPublishButton();
-    // Если функция ещё не успела определиться, пробуем снова после загрузки скриптов.
-    if(typeof window.saveSellerProduct==='function')state.installed=true;
   }
 
   install();
