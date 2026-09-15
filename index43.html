@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>EasyMarket</title>
+<style>html,body{margin:0;padding:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif}#em43{position:fixed;top:8px;left:8px;right:8px;z-index:999999;background:#6c63ff;color:#fff;border-radius:12px;padding:10px 12px;font-weight:800;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.35)}</style>
+</head>
+<body>
+<div id="em43">EasyMarket • INDEX 43 • НОВАЯ ВЕРСИЯ</div>
+<div id="root"></div>
+<script>
+(async()=>{
+ const root=document.getElementById('root');
+ try{
+  const r=await fetch('./index34.html?v=43_'+Date.now(),{cache:'no-store'});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const html=await r.text();
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  document.title=doc.title||'EasyMarket';
+  document.head.innerHTML+=doc.head.innerHTML;
+  root.innerHTML=doc.body.innerHTML;
+  [...doc.body.querySelectorAll('script')].forEach(old=>{
+   const s=document.createElement('script');
+   [...old.attributes].forEach(a=>s.setAttribute(a.name,a.value));
+   s.textContent=old.textContent;
+   document.body.appendChild(s);
+  });
+  setTimeout(()=>{
+   const style=document.createElement('style');
+   style.textContent=`
+    #sellerPublishProductBtn{width:100%!important;min-height:54px!important;height:54px!important;padding:14px 16px!important;border-radius:13px!important;font-size:16px!important;font-weight:800!important;display:block!important;box-sizing:border-box!important}
+    #em43VariantWrap{margin:14px 0;padding:14px;background:#12151c;border:1px solid #292d38;border-radius:16px}
+    #em43VariantWrap h3{margin:0 0 10px;font-size:16px}
+    .em43v{display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:7px;margin-bottom:8px}
+    .em43v input{width:100%;min-width:0;padding:11px;border-radius:10px;border:1px solid #303542;background:#191c25;color:#fff;box-sizing:border-box}
+    .em43del{border:0;border-radius:10px;background:#2a2e39;color:#fff;font-size:20px}
+    #em43Add{width:100%;height:44px;border:0;border-radius:11px;background:#252934;color:#fff;font-weight:800}
+    #em43VariantHint{color:#8d93a2;font-size:12px;margin-top:7px}
+   `;
+   document.head.appendChild(style);
+   const btn=document.getElementById('sellerPublishProductBtn');
+   const photo=document.getElementById('sellerProductImage');
+   if(btn&&photo&&!document.getElementById('em43VariantWrap')){
+    const wrap=document.createElement('div');
+    wrap.id='em43VariantWrap';
+    wrap.innerHTML='<h3>Варианты товара</h3><div id="em43Variants"></div><button id="em43Add" type="button">＋ Добавить вариант</button><div id="em43VariantHint">Количество • Цена ₽ • Остаток</div>';
+    photo.parentNode.insertBefore(wrap,photo);
+    const list=wrap.querySelector('#em43Variants');
+    const add=wrap.querySelector('#em43Add');
+    const make=(q='',p='',s='1')=>{const row=document.createElement('div');row.className='em43v';row.innerHTML='<input type="number" min="1" placeholder="Количество" value="'+q+'"><input type="number" min="0" step="1" placeholder="Цена ₽" value="'+p+'"><input type="number" min="1" placeholder="Остаток" value="'+s+'"><button class="em43del" type="button">×</button>';row.querySelector('.em43del').onclick=()=>{if(list.children.length>1)row.remove();};list.appendChild(row)};
+    make(1,'','1');
+    add.onclick=()=>make();
+   }
+   if(btn){btn.type='button';}
+  },500);
+ }catch(e){root.innerHTML='<div style="padding:30px;color:#ff6b7a;font-weight:700">Не удалось загрузить EasyMarket: '+e.message+'</div>';}
+})();
+</script>
+</body>
+</html>
