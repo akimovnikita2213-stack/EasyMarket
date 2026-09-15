@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>EasyMarket</title>
-  <meta name="easymarket-version" content="index35-seller-publish-hotfix-2026-09-16">
-  <style>html,body{margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif}#em35-loader{min-height:100vh;display:flex;align-items:center;justify-content:center;color:#858b99;font-size:14px}</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>EasyMarket</title>
+<meta name="easymarket-version" content="index35-seller-publish-hotfix-2-2026-09-16">
+<style>html,body{margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif}#em35-loader{min-height:100vh;display:flex;align-items:center;justify-content:center;color:#858b99;font-size:14px}</style>
 </head>
 <body>
 <div id="em35-loader">Загружаем EasyMarket…</div>
@@ -13,78 +13,123 @@
 (async()=>{
   try{
     const src=new URL('index34.html',location.href).href;
-    const html=await fetch(src,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Не удалось загрузить index34.html');return r.text()});
+    const response=await fetch(src,{cache:'no-store'});
+    if(!response.ok)throw new Error('Не удалось загрузить index34.html');
+    const html=await response.text();
     const doc=new DOMParser().parseFromString(html,'text/html');
+
     const patch=doc.createElement('script');
     patch.textContent=`
 (function(){
-  const state={busy:false};
-  const buttonSelector='button';
-  function publishButtons(){
-    return Array.from(document.querySelectorAll(buttonSelector)).filter(b=>/опубликовать товар/i.test((b.textContent||'').trim()));
+  const state={busy:false,installed:false};
+
+  function getPublishButton(){return document.getElementById('sellerPublishProductBtn');}
+
+  function setBusy(on,text){
+    const b=getPublishButton();
+    if(!b)return;
+    if(on){
+      if(!b.dataset.em35OriginalText)b.dataset.em35OriginalText=b.textContent||'Опубликовать товар';
+      b.disabled=true;
+      b.style.pointerEvents='none';
+      b.style.opacity='.6';
+      b.textContent=text||'Публикуем…';
+    }else{
+      b.disabled=false;
+      b.style.pointerEvents='';
+      b.style.opacity='';
+      b.textContent=b.dataset.em35OriginalText||'Опубликовать товар';
+    }
   }
-  function setBusy(on){
-    publishButtons().forEach(b=>{
-      if(on){
-        if(!b.dataset.em35Text)b.dataset.em35Text=b.textContent;
-        b.disabled=true;b.style.pointerEvents='none';b.style.opacity='.6';b.textContent='Публикуем…';
-      }else{
-        b.disabled=false;b.style.pointerEvents='';b.style.opacity='';
-        if(b.dataset.em35Text)b.textContent=b.dataset.em35Text;
-      }
-    });
-  }
-  async function compressImages(){
-    const input=Array.from(document.querySelectorAll('input[type=file]')).find(x=>x.files&&x.files[0]);
-    if(!input)return;
-    const f=input.files[0];
-    if(!f.type.startsWith('image/')||f.size<=1200*1024)return;
+
+  async function compressImageInput(){
+    const input=document.getElementById('sellerProductImage');
+    const file=input?.files?.[0];
+    if(!input||!file||!file.type.startsWith('image/')||file.size<=1200*1024)return;
     try{
-      const bmp=await createImageBitmap(f),max=1600,scale=Math.min(1,max/Math.max(bmp.width,bmp.height));
-      const c=document.createElement('canvas');c.width=Math.max(1,Math.round(bmp.width*scale));c.height=Math.max(1,Math.round(bmp.height*scale));
-      c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);bmp.close();
-      const blob=await new Promise(resolve=>c.toBlob(resolve,'image/jpeg',.82));
-      if(blob&&blob.size<f.size){
-        const name=(f.name||'photo').replace(/\\.[^.]+$/,'')+'.jpg';
-        const dt=new DataTransfer();dt.items.add(new File([blob],name,{type:'image/jpeg',lastModified:Date.now()}));input.files=dt.files;
+      const bmp=await createImageBitmap(file);
+      const max=1400;
+      const scale=Math.min(1,max/Math.max(bmp.width,bmp.height));
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(bmp.width*scale));
+      canvas.height=Math.max(1,Math.round(bmp.height*scale));
+      canvas.getContext('2d',{alpha:false}).drawImage(bmp,0,0,canvas.width,canvas.height);
+      bmp.close?.();
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.82));
+      if(blob&&blob.size<file.size){
+        const dt=new DataTransfer();
+        dt.items.add(new File([blob],(file.name||'photo').replace(/\\.[^.]+$/,'')+'.jpg',{type:'image/jpeg',lastModified:Date.now()}));
+        input.files=dt.files;
       }
     }catch(e){console.warn('EasyMarket image compression skipped',e)}
   }
-  function install(){
-    if(typeof window.saveSellerProduct==='function'&&!window.saveSellerProduct.__em35){
-      const original=window.saveSellerProduct;
-      const wrapped=async function(){
-        if(state.busy)return;
-        state.busy=true;setBusy(true);
-        try{await compressImages();return await original.apply(this,arguments)}
-        finally{setTimeout(()=>{state.busy=false;setBusy(false)},700)}
-      };
-      wrapped.__em35=true;window.saveSellerProduct=wrapped;
-    }
-    if(typeof window.approveProduct==='function'&&!window.approveProduct.__em35){
-      const original=window.approveProduct;
-      window.approveProduct=async function(id){
-        const r=await original.apply(this,arguments);
-        try{if(typeof window.loadNotificationCenter==='function')window.loadNotificationCenter(true)}catch(e){}
-        return r;
-      };window.approveProduct.__em35=true;
-    }
-    if(typeof window.rejectProduct==='function'&&!window.rejectProduct.__em35){
-      const original=window.rejectProduct;
-      window.rejectProduct=async function(id){
-        const r=await original.apply(this,arguments);
-        try{if(typeof window.loadNotificationCenter==='function')window.loadNotificationCenter(true)}catch(e){}
-        return r;
-      };window.rejectProduct.__em35=true;
-    }
+
+  function attachPublishButton(){
+    const b=getPublishButton();
+    if(!b||b.dataset.em35Bound==='1')return;
+    b.dataset.em35Bound='1';
+    b.type='button';
+    b.onclick=async function(event){
+      event.preventDefault();
+      event.stopPropagation();
+      if(state.busy)return;
+      if(typeof window.saveSellerProduct!=='function'){
+        console.error('saveSellerProduct is not available');
+        if(typeof window.showToast==='function')window.showToast('Кнопка публикации ещё загружается…');
+        return;
+      }
+
+      state.busy=true;
+      setBusy(true,'Публикуем…');
+
+      const originalNotify=window.notifySellerProductStatus;
+      let deferredNotify=null;
+
+      try{
+        // Критично: Telegram-уведомление не должно блокировать публикацию.
+        // Оригинальная функция ждёт Edge Function; если Telegram отвечает долго,
+        // UI продавца зависает на десятки секунд. Здесь уведомление запускается
+        // параллельно, а товар и панель обновляются сразу после INSERT.
+        if(typeof originalNotify==='function'){
+          window.notifySellerProductStatus=async function(){
+            const args=arguments;
+            deferredNotify=Promise.resolve().then(()=>originalNotify.apply(this,args)).catch(e=>console.warn('Deferred seller notification:',e));
+            return {ok:true,deferred:true};
+          };
+        }
+
+        await compressImageInput();
+        await window.saveSellerProduct(event);
+        if(typeof window.showToast==='function')window.showToast('Товар отправлен на проверку 🕐');
+      }catch(e){
+        console.error('EasyMarket seller publish:',e);
+        if(typeof window.showToast==='function')window.showToast('Не удалось выставить товар: '+(e?.message||'ошибка'));
+      }finally{
+        if(originalNotify)window.notifySellerProductStatus=originalNotify;
+        state.busy=false;
+        setBusy(false);
+      }
+    };
   }
+
+  function install(){
+    attachPublishButton();
+    // Если функция ещё не успела определиться, пробуем снова после загрузки скриптов.
+    if(typeof window.saveSellerProduct==='function')state.installed=true;
+  }
+
   install();
   new MutationObserver(install).observe(document.documentElement,{childList:true,subtree:true});
-  setInterval(install,500);
+  setInterval(install,700);
 })();`;
+
     doc.body.appendChild(patch);
-    document.open();document.write('<!DOCTYPE html>'+doc.documentElement.outerHTML);document.close();
-  }catch(err){document.body.innerHTML='<div style="padding:30px;text-align:center;color:#fff">Ошибка загрузки EasyMarket<br><small style="color:#888">'+String(err.message||err)+'</small></div>';}
+    document.open();
+    document.write('<!DOCTYPE html>'+doc.documentElement.outerHTML);
+    document.close();
+  }catch(err){
+    document.body.innerHTML='<div style="padding:30px;text-align:center;color:#fff">Ошибка загрузки EasyMarket<br><small style="color:#888">'+String(err.message||err)+'</small></div>';
+  }
 })();
 </script>
 </body>
