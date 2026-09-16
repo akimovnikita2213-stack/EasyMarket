@@ -20,9 +20,11 @@
 .em48row input{width:100%;min-width:0;padding:11px;border-radius:10px;border:1px solid #303542;background:#191c25;color:#fff;box-sizing:border-box}
 .em48del,.em48add{border:0;border-radius:10px;background:#252934;color:#fff}.em48add{width:100%;height:44px;font-weight:800}
 #sellerPublishProductBtn{width:100%!important;min-height:54px!important;height:54px!important;padding:14px 16px!important;border-radius:13px!important;font-size:16px!important;font-weight:800!important;box-sizing:border-box!important}
+#sellerPublishProductBtn:disabled{background:#666b75!important;color:#fff!important;opacity:1!important;cursor:not-allowed!important}
 </style>
 <script>
 (function(){
+  let busy=false;
   function install(){
     const btn=document.getElementById('sellerPublishProductBtn');
     const photo=document.getElementById('sellerProductImage');
@@ -34,22 +36,35 @@
     function row(q='',p='',s='1'){
       const x=document.createElement('div');x.className='em48row';
       x.innerHTML='<input class="em48qty" type="number" min="1" step="1" placeholder="Количество" value="'+q+'"><input class="em48price" type="number" min="0" step="1" placeholder="Цена ₽" value="'+p+'"><input class="em48stock" type="number" min="0" step="1" placeholder="Остаток" value="'+s+'"><button class="em48del" type="button">×</button>';
-      x.querySelector('button').onclick=()=>{if(list.children.length>1)x.remove()};list.appendChild(x);
+      x.querySelector('button').onclick=()=>{if(list.children.length>1){x.remove();syncButton()}};list.appendChild(x);
+      x.querySelectorAll('input').forEach(i=>{i.addEventListener('input',syncButton);i.addEventListener('change',syncButton)});
     }
-    row(1,'','1');add.onclick=()=>row();
+    function syncButton(){
+      const name=(document.getElementById('sellerProductName')?.value||'').trim();
+      const file=photo.files?.[0];
+      const rows=[...document.querySelectorAll('.em48row')];
+      const valid=rows.length>0&&rows.every(x=>{const q=Number(x.querySelector('.em48qty').value),p=Number(x.querySelector('.em48price').value),s=Number(x.querySelector('.em48stock').value);return Number.isInteger(q)&&q>0&&Number.isFinite(p)&&p>=0&&Number.isInteger(s)&&s>0});
+      const ok=!!name&&!!file&&valid&&!busy;
+      btn.disabled=!ok;
+      btn.style.setProperty('width','100%','important');btn.style.setProperty('min-height','54px','important');btn.style.setProperty('height','54px','important');btn.style.setProperty('padding','14px 16px','important');btn.style.setProperty('border-radius','13px','important');btn.style.setProperty('font-size','16px','important');btn.style.setProperty('font-weight','800','important');btn.style.setProperty('box-sizing','border-box','important');btn.style.setProperty('opacity','1','important');
+      btn.style.setProperty('background',ok?'#6c63ff':'#666b75','important');
+      btn.style.setProperty('color','#fff','important');
+    }
+    row(1,'','1');add.onclick=()=>{row();syncButton()};
     btn.type='button';
     btn.addEventListener('click',async function(e){
       e.preventDefault();e.stopImmediatePropagation();
+      if(busy)return;
       const rows=[...document.querySelectorAll('.em48row')];
-      const options=rows.map(x=>({qty:Number(x.querySelector('.em48qty').value),price:Number(x.querySelector('.em48price').value),stock:Number(x.querySelector('.em48stock').value)})).filter(x=>x.qty>0&&x.price>=0&&x.stock>=0);
-      if(!options.length||options.length!==rows.length){alert('Заполните варианты товара');return;}
+      const options=rows.map(x=>({qty:Number(x.querySelector('.em48qty').value),price:Number(x.querySelector('.em48price').value),stock:Number(x.querySelector('.em48stock').value)}));
+      if(!options.length||options.some(x=>!Number.isInteger(x.qty)||x.qty<=0||!Number.isFinite(x.price)||x.price<0||!Number.isInteger(x.stock)||x.stock<=0)){alert('Заполните варианты товара');return;}
       const name=document.getElementById('sellerProductName')?.value.trim();
       if(!name){alert('Введите название');return;}
       const me=typeof getMyUserRecord==='function'?await getMyUserRecord():null;
       if(!me?.is_seller){alert('Нет прав продавца');return;}
       const imageInput=document.getElementById('sellerProductImage');const file=imageInput?.files?.[0];
       if(!file){alert('Добавьте фото товара');return;}
-      btn.disabled=true;btn.textContent='Публикуем…';
+      busy=true;btn.disabled=true;btn.textContent='Публикуем…';btn.style.setProperty('background','#666b75','important');
       try{
         let imageUrl=null;
         if(typeof compressSellerImage==='function') imageUrl=await compressSellerImage(file,900,.72,550*1024);
@@ -59,16 +74,22 @@
         const icon=document.getElementById('sellerProductIcon')?.value.trim()||'📦';
         const category=document.getElementById('sellerProductCategory')?.value||'other';
         const first=options[0];
-        const payload={name,description,details,price:first.price,icon,category,image_url:imageUrl,seller_id:Number(me.telegram_id),seller_username:me.username?String(me.username).replace(/^@/,''):null,stock:first.stock,price_options:options.map(x=>({qty:x.qty,price:x.price,stock:x.stock})),approval_status:'pending'};
+        const payload={name,description,details,price:first.price,icon,category,image_url:imageUrl,seller_id:Number(me.telegram_id),seller_username:me.username?String(me.username).replace(/^@/,''):null,stock:options.reduce((a,x)=>a+x.stock,0),price_options:options.map(x=>({qty:x.qty,price:x.price,stock:x.stock})),approval_status:'pending'};
         const {data,error}=await supabaseClient.from('products').insert(payload).select('*').single();
         if(error)throw error;
+        if(typeof notifySellerProductStatus==='function'){try{await notifySellerProductStatus(data,'pending')}catch(x){console.error('seller notification',x)}}
         alert('Товар отправлен на проверку 🕐');
         ['sellerProductName','sellerProductDescription','sellerProductDetails','sellerProductPrice'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
         document.getElementById('sellerProductStock').value='1';document.getElementById('sellerProductImage').value='';document.getElementById('sellerProductImagePreview').innerHTML='';
+        list.innerHTML='';row(1,'','1');
         if(typeof loadProducts==='function')await loadProducts();if(typeof loadSellerDashboard==='function')await loadSellerDashboard();
       }catch(err){console.error(err);alert('Ошибка: '+(err?.message||err));}
-      finally{btn.disabled=false;btn.textContent='Опубликовать товар';}
+      finally{busy=false;btn.textContent='Опубликовать товар';syncButton()}
     },true);
+    const nameEl=document.getElementById('sellerProductName');
+    if(nameEl){nameEl.addEventListener('input',syncButton);nameEl.addEventListener('change',syncButton)}
+    photo.addEventListener('change',syncButton);
+    syncButton();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
   setTimeout(install,500);setTimeout(install,1500);
