@@ -10,53 +10,63 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch only Telegram button bindings and stray text
+      - name: Patch only quantity selection and stray text
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
-          p=Path('index.html')
-          s=p.read_text(encoding='utf-8')
-          # Remove only literal escaped newline-only text nodes/content.
-          s=re.sub(r'(?<![A-Za-z0-9])(?:\\\\n[ \\t]*){2,}(?![A-Za-z0-9])', '', s)
           fix=r'''
-<script id="telegram-shop-button-fix">
+<script id="telegram-quantity-only-fix">
 (function(){
   function expose(){
-    var names=['openProductModal','closeProductModal','addToCart','addToCartFromModal','buyNow','openCart','closeCart','changeCartQuantity','removeFromCart','checkout','selectProductQuantity','setCategory','renderProducts'];
-    names.forEach(function(n){
-      try { if (typeof window[n] !== 'function' && typeof globalThis[n] === 'function') window[n]=globalThis[n]; } catch(e) {}
+    ['openProductModal','closeProductModal','addToCart','addToCartFromModal','buyNow','openCart','closeCart','changeCartQuantity','removeFromCart','checkout','setCategory','renderProducts'].forEach(function(n){
+      try { if(typeof globalThis[n]==='function') window[n]=globalThis[n]; } catch(e) {}
+    });
+  }
+  function selectQty(productId, qty){
+    var product=(typeof products!=='undefined' && Array.isArray(products)) ? products.find(function(p){return Number(p.id)===Number(productId);}) : null;
+    if(!product) return;
+    var options=[];
+    try{ options=getPriceOptions(product)||[]; }catch(e){}
+    var chosen=options.find(function(o){return Number(o.qty)===Number(qty);}) || options[0] || {qty:1,price:Number(product.price||0)};
+    document.querySelectorAll('#productModal .quantity-option').forEach(function(b){
+      var m=(b.textContent||'').match(/[-+]?\d+(?:[.,]\d+)?/);
+      b.classList.toggle('active', !!m && Number(m[0].replace(',','.'))===Number(chosen.qty));
+    });
+    var price=document.getElementById('modalSelectedPrice');
+    if(price) price.textContent=Number(chosen.price||0)+' ₽';
+    var btn=document.querySelector('#productModal .product-modal-actions .product-buy-now');
+    if(btn) btn.setAttribute('onclick','addToCartFromModal('+Number(product.id)+','+Number(chosen.qty)+')');
+  }
+  function cleanStray(){
+    var root=document.body;if(!root)return;
+    var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT), nodes=[];
+    while(w.nextNode()) nodes.push(w.currentNode);
+    nodes.forEach(function(n){
+      var t=(n.nodeValue||'').trim();
+      if(/^(?:\\\\n|\\\\r|\\\\t|\\s)+$/.test(t) && /\\\\n|\\\\r|\\\\t/.test(t)) n.remove();
     });
   }
   expose();
-  document.addEventListener('DOMContentLoaded', expose, {once:true});
-  setTimeout(expose, 0);
-  setTimeout(expose, 500);
-  function cleanStrayNewlines(){
-    var root=document.body;
-    if(!root)return;
-    var walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
-    var nodes=[];
-    while(walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach(function(node){
-      var t=node.nodeValue||'';
-      if(/^(?:\\\\n[ \\t]*){2,}$/.test(t)) node.remove();
-    });
-  }
-  cleanStrayNewlines();
-  document.addEventListener('DOMContentLoaded', cleanStrayNewlines, {once:true});
+  window.selectProductQuantity=selectQty;
+  document.addEventListener('DOMContentLoaded',function(){expose();window.selectProductQuantity=selectQty;cleanStray();});
+  setTimeout(function(){expose();window.selectProductQuantity=selectQty;cleanStray();},50);
+  setTimeout(cleanStray,500);
 })();
 </script>
 '''
-          if 'id="telegram-shop-button-fix"' not in s:
+          for name in ['index.html','index-final.html']:
+              p=Path(name)
+              if not p.exists(): continue
+              s=p.read_text(encoding='utf-8')
+              if 'id="telegram-quantity-only-fix"' in s: continue
               s=s.replace('</body>',fix+'\n</body>')
-          p.write_text(s,encoding='utf-8')
+              p.write_text(s,encoding='utf-8')
           PY
       - name: Commit
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html
-          git commit -m 'Fix Telegram product modal and cart buttons only' || exit 0
+          git add index.html index-final.html
+          git commit -m 'Fix product quantity selection and stray text only' || exit 0
           git push
