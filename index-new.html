@@ -1,0 +1,12 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>EasyMarket</title></head><body><div style="padding:40px;text-align:center;font-family:Arial;color:#888">Загрузка EasyMarket…</div><script>
+(async function(){
+  try{
+    var r=await fetch('./index.html',{cache:'no-store'});
+    if(!r.ok)throw new Error('Не удалось загрузить магазин: '+r.status);
+    var html=await r.text();
+    html=html.replace(/\/\* EM-ROBUST-FUNCTIONAL-LAYER-2026-09-16 \*\/[\\s\\S]*$/,'');
+    html=html.replace('</body>','<script src="./telegram-fix.js"></script></body>');
+    document.open();document.write(html);document.close();
+  }catch(e){document.body.innerHTML='<div style="padding:30px;font:16px Arial;color:#fff;background:#071225;min-height:100vh">Не удалось открыть EasyMarket.<br><br>'+String(e.message||e)+'</div>'}
+})();
+</script></body></html>
