@@ -15,7 +15,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build fixed index
+      - name: Build fixed indexes
         shell: bash
         run: |
           python3 - <<'PY'
@@ -24,15 +24,12 @@ jobs:
           marker = '/* EM-ROBUST-FUNCTIONAL-LAYER-2026-09-16 */'
           if marker in src:
               src = src.split(marker, 1)[0]
-          # Remove the stray orphan CSS declarations that were left after .product-modal-text.
           orphan = '''\n      background: #141720;\n      border: 1px solid #242834;\n      border-radius: 18px;\n      padding: 14px;\n    }\n'''
           src = src.replace(orphan, '\n')
-          # Make all inline button handlers explicitly available on window.
           hook = '''\n<script id="easymarket-global-actions">\n(function(){\n  const names = [\n    'openProductModal','closeProductModal','addToCart','addToCartFromModal','buyNow',\n    'openCart','closeCart','changeCartQuantity','removeFromCart','checkout',\n    'setCategory','renderProducts','selectProductQuantity'\n  ];\n  names.forEach(function(name){\n    try { if (typeof window[name] !== 'function' && typeof globalThis[name] === 'function') window[name] = globalThis[name]; } catch(e) {}\n  });\n})();\n</script>\n'''
-          # The normal script already contains the functions. Insert the binding block before </body>.
           src = src.replace('</body>', hook + '\n</body>')
           Path('index-fixed.html').write_text(src, encoding='utf-8')
-          # Keep the live GitHub Pages entry point on the exact same cleaned file.
+          Path('index-final.html').write_text(src, encoding='utf-8')
           Path('index.html').write_text(src, encoding='utf-8')
           PY
 
@@ -41,10 +38,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html index-fixed.html
+          git add index.html index-fixed.html index-final.html
           if git diff --cached --quiet; then
             echo "No changes"
           else
-            git commit -m "Create clean fixed EasyMarket index"
+            git commit -m "Keep final EasyMarket design and working shop"
             git push
           fi
