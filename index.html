@@ -5,56 +5,36 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>EasyMarket</title>
 <style>
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0d12}
-#app{position:fixed;inset:0;width:100%;height:100%;border:0;display:block;background:#0b0d12}
+html,body{margin:0;width:100%;min-height:100%;background:#0b0d12;color:#fff;font-family:Arial,sans-serif}
+#boot{padding:30px;text-align:center;color:#9db1cc}
 </style>
 </head>
 <body>
-<iframe id="app" src="./index34.html?fix=cards_20260916" title="EasyMarket"></iframe>
+<div id="boot">Загрузка EasyMarket…</div>
 <script>
-(function(){
-  var frame=document.getElementById('app');
-  function setup(){
-    try{
-      var w=frame.contentWindow,d=frame.contentDocument;
-      if(!w||!d)return;
-      function idOf(el){
-        var card=el.closest('.product');
-        var s=(card&&card.getAttribute('onclick'))||el.getAttribute('onclick')||'';
-        var m=s.match(/(?:openProductModal|addToCart)\s*\(\s*(\d+)/);
-        return m?Number(m[1]):null;
+(async function(){
+  try{
+    const r=await fetch('./index34.html?samepage='+Date.now(),{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const html=await r.text();
+    const parsed=new DOMParser().parseFromString(html,'text/html');
+    const scripts=[...parsed.scripts].map(s=>({src:s.src,text:s.textContent,type:s.type||'text/javascript'}));
+    document.head.innerHTML=parsed.head.innerHTML;
+    document.body.innerHTML=parsed.body.innerHTML;
+    for(const s of scripts){
+      const el=document.createElement('script');
+      el.type=s.type;
+      if(s.src){
+        await new Promise((resolve,reject)=>{el.src=s.src;el.onload=resolve;el.onerror=()=>reject(new Error('Не загрузился скрипт: '+s.src));document.head.appendChild(el);});
+      }else{
+        el.textContent=s.text;
+        document.body.appendChild(el);
       }
-      d.querySelectorAll('.product').forEach(function(card){
-        var id=idOf(card);
-        if(id==null)return;
-        card.removeAttribute('onclick');
-        card.addEventListener('click',function(e){
-          if(e.target.closest('button'))return;
-          e.preventDefault();e.stopPropagation();
-          if(typeof w.openProductModal==='function')w.openProductModal(id);
-        });
-      });
-      d.querySelectorAll('.product-buy-now').forEach(function(btn){
-        var id=idOf(btn);
-        if(id==null)return;
-        btn.removeAttribute('onclick');
-        btn.setAttribute('type','button');
-        btn.addEventListener('click',function(e){
-          e.preventDefault();e.stopPropagation();
-          if(typeof w.addToCart==='function')w.addToCart(id);
-        });
-      });
-      d.querySelectorAll('.checkout-btn').forEach(function(btn){
-        btn.setAttribute('type','button');
-        btn.removeAttribute('onclick');
-        btn.addEventListener('click',function(e){
-          e.preventDefault();e.stopPropagation();
-          if(typeof w.checkout==='function')w.checkout();
-        });
-      });
-    }catch(e){console.error('EasyMarket click fix',e)}
+    }
+  }catch(e){
+    document.body.innerHTML='<div style="padding:30px;color:#fff;font-family:Arial,sans-serif">Ошибка загрузки EasyMarket: '+String(e&&e.message||e)+'</div>';
+    console.error(e);
   }
-  frame.addEventListener('load',function(){setup();setTimeout(setup,300);setTimeout(setup,1000);setTimeout(setup,2000);});
 })();
 </script>
 </body>
