@@ -10,15 +10,15 @@
 <script>
 (async()=>{
   try{
-    const r=await fetch('./index34.html?build=52_'+Date.now(),{cache:'no-store'});
+    const r=await fetch('./index34.html?build=53_'+Date.now(),{cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     let html=await r.text();
     const patch=`
-<style id="em52-style">
-#em52Variants{margin:14px 0;padding:14px;background:#12151c;border:1px solid #292d38;border-radius:16px}
-.em52row{display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:7px;margin-bottom:8px}
-.em52row input{width:100%;min-width:0;padding:11px;border-radius:10px;border:1px solid #303542;background:#191c25;color:#fff;box-sizing:border-box}
-.em52del,.em52add{border:0;border-radius:10px;background:#252934;color:#fff}.em52add{width:100%;height:44px;font-weight:800}
+<style id="em53-variants-style">
+#em53Variants{margin:14px 0;padding:14px;background:#12151c;border:1px solid #292d38;border-radius:16px}
+.em53row{display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:7px;margin-bottom:8px}
+.em53row input{width:100%;min-width:0;padding:11px;border-radius:10px;border:1px solid #303542;background:#191c25;color:#fff;box-sizing:border-box}
+.em53del,.em53add{border:0;border-radius:10px;background:#252934;color:#fff}.em53add{width:100%;height:44px;font-weight:800}
 #sellerPublishProductBtn{width:100%!important;min-height:54px!important;height:54px!important;padding:14px 16px!important;border-radius:13px!important;font-size:16px!important;font-weight:800!important;box-sizing:border-box!important}
 #sellerPublishProductBtn:disabled{background:#666b75!important;color:#fff!important;opacity:1!important;cursor:not-allowed!important}
 </style>
@@ -28,21 +28,21 @@
   function install(){
     const btn=document.getElementById('sellerPublishProductBtn');
     const photo=document.getElementById('sellerProductImage');
-    if(!btn||!photo||document.getElementById('em52Variants'))return;
-    const w=document.createElement('div');w.id='em52Variants';
-    w.innerHTML='<b style="display:block;margin-bottom:10px">Варианты товара</b><div id="em52list"></div><button id="em52add" class="em52add" type="button">＋ Добавить вариант</button><div style="color:#8d93a2;font-size:12px;margin-top:7px">Количество • Цена ₽ • Остаток</div>';
+    if(!btn||!photo||document.getElementById('em53Variants'))return;
+    const w=document.createElement('div');w.id='em53Variants';
+    w.innerHTML='<b style="display:block;margin-bottom:10px">Варианты товара</b><div id="em53list"></div><button id="em53add" class="em53add" type="button">＋ Добавить вариант</button><div style="color:#8d93a2;font-size:12px;margin-top:7px">Количество • Цена ₽ • Остаток</div>';
     photo.parentNode.insertBefore(w,photo);
-    const list=document.getElementById('em52list'),add=document.getElementById('em52add');
+    const list=document.getElementById('em53list'),add=document.getElementById('em53add');
     function row(q='',p='',s='1'){
-      const x=document.createElement('div');x.className='em52row';
-      x.innerHTML='<input class="em52qty" type="number" min="1" step="1" placeholder="Количество" value="'+q+'"><input class="em52price" type="number" min="0" step="1" placeholder="Цена ₽" value="'+p+'"><input class="em52stock" type="number" min="0" step="1" placeholder="Остаток" value="'+s+'"><button class="em52del" type="button">×</button>';
-      x.querySelector('.em52del').onclick=()=>{if(list.children.length>1){x.remove();syncButton()}};
+      const x=document.createElement('div');x.className='em53row';
+      x.innerHTML='<input class="em53qty" type="number" min="1" step="1" placeholder="Количество" value="'+q+'"><input class="em53price" type="number" min="0" step="1" placeholder="Цена ₽" value="'+p+'"><input class="em53stock" type="number" min="0" step="1" placeholder="Остаток" value="'+s+'"><button class="em53del" type="button">×</button>';
+      x.querySelector('.em53del').onclick=()=>{if(list.children.length>1){x.remove();syncButton()}};
       list.appendChild(x);
       x.querySelectorAll('input').forEach(i=>{i.addEventListener('input',syncButton);i.addEventListener('change',syncButton)});
     }
     function validOptions(){
-      const rows=[...list.querySelectorAll('.em52row')];
-      return rows.map(x=>({qty:Number(x.querySelector('.em52qty').value),price:Number(x.querySelector('.em52price').value),stock:Number(x.querySelector('.em52stock').value)}));
+      const rows=[...list.querySelectorAll('.em53row')];
+      return rows.map(x=>({qty:Number(x.querySelector('.em53qty').value),price:Number(x.querySelector('.em53price').value),stock:Number(x.querySelector('.em53stock').value)}));
     }
     function syncButton(){
       if(busy)return;
@@ -71,7 +71,11 @@
       if(!me?.is_seller){alert('Нет прав продавца');return;}
       const file=document.getElementById('sellerProductImage')?.files?.[0];
       if(!file){alert('Добавьте фото товара');return;}
-      busy=true;btn.disabled=true;btn.textContent='Ожидайте…';btn.style.setProperty('background','#666b75','important');btn.style.setProperty('color','#fff','important');
+      busy=true;
+      btn.disabled=true;
+      btn.textContent='Ожидайте…';
+      btn.style.setProperty('background','#666b75','important');
+      btn.style.setProperty('color','#fff','important');
       try{
         let imageUrl=null;
         if(typeof compressSellerImage==='function')imageUrl=await compressSellerImage(file,900,.72,550*1024);
@@ -94,42 +98,18 @@
         if(typeof loadProducts==='function')await loadProducts();
         if(typeof loadSellerDashboard==='function')await loadSellerDashboard();
       }catch(err){console.error(err);alert('Ошибка: '+(err?.message||err));}
-      finally{busy=false;btn.textContent='Опубликовать товар';syncButton()}
+      finally{
+        busy=false;
+        btn.textContent='Опубликовать товар';
+        syncButton();
+      }
     },true);
     const nameEl=document.getElementById('sellerProductName');if(nameEl){nameEl.addEventListener('input',syncButton);nameEl.addEventListener('change',syncButton)}
-    photo.addEventListener('change',syncButton);syncButton();
+    photo.addEventListener('change',syncButton);
+    syncButton();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
   setTimeout(install,500);setTimeout(install,1500);
-})();
-
-/* Compatibility bridge: the base app keeps all original cart/checkout logic.
-   This only restores clicks if Telegram WebView skips inline onclick handlers. */
-(function(){
-  function call(name,args){try{if(typeof window[name]==='function'){window[name].apply(window,args);return true}}catch(e){console.error(name,e)}return false}
-  document.addEventListener('click',function(e){
-    const t=e.target?.closest?.('button,[role="button"],.product');
-    if(!t)return;
-    if(t.id==='sellerPublishProductBtn')return;
-    if(t.matches('.seller-link')||t.closest('.seller-link'))return;
-    if(t.id==='checkoutButton'){
-      e.preventDefault();e.stopPropagation();call('checkout',[]);return;
-    }
-    if(t.getAttribute('aria-label')==='Корзина'){
-      e.preventDefault();e.stopPropagation();call('openCart',[]);return;
-    }
-    if(t.classList.contains('product-buy-now')){
-      const code=t.getAttribute('onclick')||'';
-      let m=code.match(/addToCartFromModal\\((\\d+)\\s*,\\s*(\\d+)/);
-      if(m){e.preventDefault();e.stopPropagation();if(!call('addToCartFromModal',[Number(m[1]),Number(m[2])])){call('addToCart',[Number(m[1]),Number(m[2])])}return;}
-      m=code.match(/addToCart\\((\\d+)/);
-      if(m){e.preventDefault();e.stopPropagation();call('addToCart',[Number(m[1])]);return;}
-    }
-    if(t.classList.contains('product')){
-      const code=t.getAttribute('onclick')||'';const m=code.match(/openProductModal\\((\\d+)/);
-      if(m){e.preventDefault();e.stopPropagation();call('openProductModal',[Number(m[1])]);return;}
-    }
-  },true);
 })();
 <\/script>`;
     html=html.replace('</body>',patch+'</body>');
