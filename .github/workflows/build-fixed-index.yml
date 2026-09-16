@@ -26,8 +26,11 @@ jobs:
               src = src.split(marker, 1)[0]
           orphan = '''\n      background: #141720;\n      border: 1px solid #242834;\n      border-radius: 18px;\n      padding: 14px;\n    }\n'''
           src = src.replace(orphan, '\n')
-          hook = '''\n<script id="easymarket-global-actions">\n(function(){\n  const names = [\n    'openProductModal','closeProductModal','addToCart','addToCartFromModal','buyNow',\n    'openCart','closeCart','changeCartQuantity','removeFromCart','checkout',\n    'setCategory','renderProducts','selectProductQuantity'\n  ];\n  names.forEach(function(name){\n    try { if (typeof window[name] !== 'function' && typeof globalThis[name] === 'function') window[name] = globalThis[name]; } catch(e) {}\n  });\n})();\n</script>\n'''
-          src = src.replace('</body>', hook + '\n</body>')
+          bind = '''\n\n  // Telegram WebView: expose existing app actions on window for inline buttons.\n  try {\n    window.openProductModal = openProductModal;\n    window.closeProductModal = closeProductModal;\n    window.addToCart = addToCart;\n    window.addToCartFromModal = addToCartFromModal;\n    window.buyNow = buyNow;\n    window.openCart = openCart;\n    window.closeCart = closeCart;\n    window.changeCartQuantity = changeCartQuantity;\n    window.removeFromCart = removeFromCart;\n    window.checkout = checkout;\n    window.setCategory = setCategory;\n    window.renderProducts = renderProducts;\n    window.selectProductQuantity = selectProductQuantity;\n  } catch (e) { console.warn('EasyMarket global actions bind failed', e); }\n'''
+          pos = src.rfind('</script>')
+          if pos == -1:
+              raise SystemExit('No closing script tag found')
+          src = src[:pos] + bind + src[pos:]
           Path('index-fixed.html').write_text(src, encoding='utf-8')
           Path('index-final.html').write_text(src, encoding='utf-8')
           Path('index.html').write_text(src, encoding='utf-8')
@@ -42,6 +45,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes"
           else
-            git commit -m "Keep final EasyMarket design and working shop"
+            git commit -m "Fix Telegram WebView product and cart button handlers"
             git push
           fi
