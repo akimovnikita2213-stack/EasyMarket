@@ -9,20 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Copy full stable app without broken appended layer
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          src=Path('index.html').read_text(encoding='utf-8')
-          marker='/* EM-ROBUST-FUNCTIONAL-LAYER-2026-09-16 */'
-          if marker in src:
-              src=src.split(marker,1)[0].rstrip()+'\n'
-          Path('index-final.html').write_text(src,encoding='utf-8')
-          PY
+      - name: Copy the working page exactly
+        shell: bash
+        run: cp index.html index-final.html
       - name: Commit final file
+        shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index-final.html
-          git commit -m 'Build final with stable design and working shop' || exit 0
+          git commit -m 'Sync final Telegram page with working EasyMarket page' || exit 0
           git push
