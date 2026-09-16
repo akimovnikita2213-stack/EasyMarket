@@ -4,57 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>EasyMarket</title>
-<style>
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0d12}
-#app{position:fixed;inset:0;width:100%;height:100%;border:0;display:block;background:#0b0d12}
-</style>
-</head>
-<body>
-<iframe id="app" src="./index34.html" title="EasyMarket"></iframe>
 <script>
 (function(){
-  var frame=document.getElementById('app');
-  frame.addEventListener('load',function(){
-    try{
-      var w=frame.contentWindow,d=frame.contentDocument;
-      if(!w||!d)return;
-      function getId(el){
-        var card=el.closest('.product');
-        var text=(card&&card.getAttribute('onclick'))||el.getAttribute('onclick')||'';
-        var m=text.match(/(?:openProductModal|addToCart)\((\d+)/);
-        if(m)return Number(m[1]);
-        if(card&&card.dataset.productId)return Number(card.dataset.productId);
-        return null;
-      }
-      d.addEventListener('click',function(e){
-        var el=e.target.closest('.product-buy-now');
-        if(el){
-          var id=getId(el);
-          if(id!=null && typeof w.addToCart==='function'){
-            e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-            w.addToCart(id);return;
-          }
-        }
-        el=e.target.closest('.product');
-        if(el && !e.target.closest('button')){
-          var id=getId(el);
-          if(id!=null && typeof w.openProductModal==='function'){
-            e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-            w.openProductModal(id);return;
-          }
-        }
-      },true);
-      d.addEventListener('click',function(e){
-        var el=e.target.closest('.checkout-btn');
-        if(el && typeof w.checkout==='function'){
-          e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-          w.checkout();
-        }
-      },true);
-      d.querySelectorAll('.product-buy-now,.checkout-btn').forEach(function(b){b.setAttribute('type','button')});
-    }catch(err){console.error('EasyMarket interaction fix',err)}
-  });
+  var target='./index34.html'+window.location.search;
+  window.location.replace(target);
 })();
 </script>
-</body>
+</head>
+<body style="margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif"></body>
 </html>
