@@ -4,22 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>EasyMarket</title>
-<style>html,body{margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif}#em-loading{min-height:100vh;display:flex;align-items:center;justify-content:center;font-size:18px;color:#a8a8b8;padding:20px;text-align:center}</style>
-</head>
-<body>
-<div id="em-loading">Загрузка EasyMarket…</div>
 <script>
-(async()=>{
- try{
-  const r=await fetch('./index-final.html?v='+Date.now(),{cache:'no-store'});
-  if(!r.ok)throw new Error('HTTP '+r.status);
-  let html=await r.text();
-  html=html.replace(/\\n<script id="easymarket-telegram-interaction-bridge">[\s\S]*?<\/script>\\n/g,'');
-  html=html.replace(/<script id="em-final-telegram-bridge">[\s\S]*?<\/script>/g,'');
-  html=html.replace('</body>','<script src="./bot-bridge.js?v=1"></script></body>');
-  document.open();document.write(html);document.close();
- }catch(e){document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:#fff;background:#0b0d12;font-family:Arial,sans-serif"><div><h2>Не удалось открыть EasyMarket</h2><p>'+String(e.message||e)+'</p><button onclick="location.reload()" style="padding:12px 18px;border:0;border-radius:12px;background:#6c63ff;color:#fff;font-size:16px">Повторить</button></div></div>'}
+(function(){
+  try {
+    window.location.replace('./index.html?telegram=1');
+  } catch(e) {
+    location.href='./index.html?telegram=1';
+  }
 })();
 </script>
+</head>
+<body style="margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh">
+<div>Открываем EasyMarket…</div>
+<noscript><a href="./index.html">Открыть EasyMarket</a></noscript>
 </body>
 </html>
