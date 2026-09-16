@@ -4835,5 +4835,34 @@ window.addToCart = addToCart;
 })();
 </script>
 
+
+<script id="em-telegram-click-fix">
+/* EM-TELEGRAM-CLICK-DELEGATION-2026-09-16
+   Telegram WebView-safe delegation for existing product/cart onclicks.
+   No visual/layout changes. */
+(function(){
+  function runExistingAction(el){
+    if(!el) return false;
+    const code = el.getAttribute && el.getAttribute('onclick');
+    if(!code) return false;
+    let m;
+    if((m=code.match(/openProductModal\(\s*(\d+)/))){ openProductModal(Number(m[1])); return true; }
+    if((m=code.match(/addToCartFromModal\(\s*(\d+)\s*,\s*Number\([^)]*?([0-9]+)[^)]*\)/))){ addToCartFromModal(Number(m[1]), Number(m[2])); return true; }
+    if((m=code.match(/addToCart\(\s*(\d+)(?:\s*,\s*([0-9]+))?/))){ addToCart(Number(m[1]), m[2] ? Number(m[2]) : undefined); return true; }
+    if(/\bcheckout\s*\(\s*\)/.test(code)){ checkout(); return true; }
+    if(/\bopenCart\s*\(\s*\)/.test(code)){ openCart(); return true; }
+    return false;
+  }
+  document.addEventListener('click', function(e){
+    const el = e.target && e.target.closest ? e.target.closest('[onclick]') : null;
+    if(!el) return;
+    const code = el.getAttribute('onclick') || '';
+    if(!/(openProductModal|addToCartFromModal|addToCart|checkout|openCart)\s*\(/.test(code)) return;
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    try { runExistingAction(el); } catch(err) { console.error('Telegram click fix:', err); }
+  }, true);
+})();
+</script>
+
 </body>
 </html>
