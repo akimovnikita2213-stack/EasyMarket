@@ -1,6 +1,8 @@
 name: Build clean fixed EasyMarket index
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -12,20 +14,65 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Keep current working index unchanged
+      - name: Add Telegram-safe click fallback without changing UI
         shell: bash
         run: |
-          cp index.html index-fixed.html
-          cp index.html index-final.html
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          src = p.read_text(encoding='utf-8')
+          marker = 'EM-TELEGRAM-CLICK-FALLBACK-2026-09-17'
+          if marker not in src:
+              hook = r'''
+<script>
+/* EM-TELEGRAM-CLICK-FALLBACK-2026-09-17 */
+(function(){
+  document.addEventListener('click', function(e){
+    var buy = e.target && e.target.closest ? e.target.closest('.product-buy-now') : null;
+    if (buy) {
+      var card = buy.closest('.product');
+      if (!card) return;
+      var m = (buy.getAttribute('onclick') || '').match(/addToCart\((\d+)/);
+      var id = m ? Number(m[1]) : null;
+      if (id && typeof window.addToCart === 'function') {
+        e.preventDefault();
+        e.stopPropagation();
+        window.addToCart(id);
+      }
+      return;
+    }
+    var card = e.target && e.target.closest ? e.target.closest('.product') : null;
+    if (card && typeof window.openProductModal === 'function') {
+      var buyInside = e.target.closest ? e.target.closest('.product-buy-now') : null;
+      if (buyInside) return;
+      var onclick = card.getAttribute('onclick') || '';
+      var m = onclick.match(/openProductModal\((\d+)/);
+      var id = m ? Number(m[1]) : null;
+      if (id) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.openProductModal(id);
+      }
+    }
+  }, true);
+})();
+</script>
+'''
+              src = src.replace('</body>', hook + '\n</body>', 1)
+              p.write_text(src, encoding='utf-8')
+          src = p.read_text(encoding='utf-8')
+          Path('index-fixed.html').write_text(src, encoding='utf-8')
+          Path('index-final.html').write_text(src, encoding='utf-8')
+          PY
       - name: Commit fixed files
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index-fixed.html index-final.html
+          git add index.html index-fixed.html index-final.html
           if git diff --cached --quiet; then
             echo "No changes"
           else
-            git commit -m "Sync final page with working EasyMarket index"
+            git commit -m "Fix Telegram product card and add-to-cart clicks"
             git push
           fi
