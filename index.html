@@ -10,7 +10,7 @@
 <script>
 (async()=>{
   try{
-    const r=await fetch('./index34.html?build=48fix2_'+Date.now(),{cache:'no-store'});
+    const r=await fetch('./index34.html?build=48restore_'+Date.now(),{cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     let html=await r.text();
     const patch=`
@@ -23,46 +23,7 @@
 </style>
 <script>
 (function(){
-  let installed=false;
-  async function ensureProduct(productId){
-    const id=Number(productId);
-    if(!Number.isFinite(id)) return null;
-    if(Array.isArray(window.products)){
-      const local=window.products.find(p=>Number(p.id)===id);
-      if(local) return local;
-    }
-    if(typeof supabaseClient==='undefined') return null;
-    try{
-      const {data,error}=await supabaseClient.from('products').select('*').eq('id',id).maybeSingle();
-      if(error||!data) return null;
-      if(Array.isArray(window.products)) window.products.push(data);
-      return data;
-    }catch(e){console.error('EasyMarket product fetch:',e);return null;}
-  }
-  function installStoreFix(){
-    if(installed||typeof window.openProductModal!=='function'||typeof window.addToCart!=='function') return;
-    installed=true;
-    const originalOpen=window.openProductModal;
-    const originalAdd=window.addToCart;
-    window.openProductModal=async function(productId,selectedQty){
-      const p=await ensureProduct(productId);
-      if(!p){showToast('Товар не найден');return;}
-      return originalOpen(Number(p.id),selectedQty);
-    };
-    window.addToCart=async function(productId,qty){
-      const p=await ensureProduct(productId);
-      if(!p){showToast('Товар не найден');return false;}
-      return originalAdd(Number(p.id),qty);
-    };
-    // Keep the original index34 click handlers. Only add a stable data id for debugging/fallback.
-    document.querySelectorAll('.product').forEach(card=>{
-      if(card.dataset.em48Id) return;
-      const m=String(card.getAttribute('onclick')||'').match(/openProductModal\\s*\\(\\s*(\\d+)/);
-      if(m) card.dataset.em48Id=m[1];
-    });
-  }
   function install(){
-    installStoreFix();
     const btn=document.getElementById('sellerPublishProductBtn');
     const photo=document.getElementById('sellerProductImage');
     if(!btn||!photo||document.getElementById('em48Variants'))return;
@@ -98,7 +59,7 @@
         const icon=document.getElementById('sellerProductIcon')?.value.trim()||'📦';
         const category=document.getElementById('sellerProductCategory')?.value||'other';
         const first=options[0];
-        const payload={name,description,details,price:first.price,icon,category,image_url:imageUrl,seller_id:Number(me.telegram_id),seller_username:me.username?String(me.username).replace(/^@/,''):null,stock:first.stock,price_options:options,approval_status:'pending'};
+        const payload={name,description,details,price:first.price,icon,category,image_url:imageUrl,seller_id:Number(me.telegram_id),seller_username:me.username?String(me.username).replace(/^@/,''):null,stock:first.stock,price_options:options.map(x=>({qty:x.qty,price:x.price,stock:x.stock})),approval_status:'pending'};
         const {error}=await supabaseClient.from('products').insert(payload).select('*').single();
         if(error)throw error;
         alert('Товар отправлен на проверку 🕐');
@@ -112,7 +73,7 @@
     },true);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
-  setTimeout(install,300);setTimeout(install,1000);setTimeout(install,2000);setInterval(installStoreFix,800);
+  setTimeout(install,500);setTimeout(install,1500);
 })();
 <\/script>`;
     html=html.replace('</body>',patch+'</body>');
