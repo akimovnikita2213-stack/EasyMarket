@@ -72,6 +72,26 @@
       finally{btn.disabled=false;btn.textContent='Опубликовать товар';}
     },true);
   }
+
+  function repairStoreActions(){
+    if(typeof window.loadProducts!=='function') return;
+    if(typeof window.__emOriginalOpenProductModal!=='function' && typeof window.openProductModal==='function') window.__emOriginalOpenProductModal=window.openProductModal;
+    if(typeof window.__emOriginalAddToCart!=='function' && typeof window.addToCart==='function') window.__emOriginalAddToCart=window.addToCart;
+    if(window.__emStoreRepairInstalled) return;
+    window.__emStoreRepairInstalled=true;
+    window.openProductModal=async function(productId, selectedQty){
+      try{ await window.loadProducts(); }catch(e){ console.error('PRODUCT REFRESH ERROR',e); }
+      return window.__emOriginalOpenProductModal(productId, selectedQty);
+    };
+    window.addToCart=async function(productId, qty){
+      try{ await window.loadProducts(); }catch(e){ console.error('PRODUCT REFRESH ERROR',e); }
+      return window.__emOriginalAddToCart(productId, qty);
+    };
+  }
+
+  repairStoreActions();
+  setTimeout(repairStoreActions,300);
+  setTimeout(repairStoreActions,1000);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
   setTimeout(install,500);setTimeout(install,1500);
 })();
