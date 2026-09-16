@@ -4,12 +4,58 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>EasyMarket</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0d12}
+#app{position:fixed;inset:0;width:100%;height:100%;border:0;display:block;background:#0b0d12}
+</style>
+</head>
+<body>
+<iframe id="app" src="./index34.html?fix=cards_20260916" title="EasyMarket"></iframe>
 <script>
 (function(){
-  var target='./index34.html'+window.location.search;
-  window.location.replace(target);
+  var frame=document.getElementById('app');
+  function setup(){
+    try{
+      var w=frame.contentWindow,d=frame.contentDocument;
+      if(!w||!d)return;
+      function idOf(el){
+        var card=el.closest('.product');
+        var s=(card&&card.getAttribute('onclick'))||el.getAttribute('onclick')||'';
+        var m=s.match(/(?:openProductModal|addToCart)\s*\(\s*(\d+)/);
+        return m?Number(m[1]):null;
+      }
+      d.querySelectorAll('.product').forEach(function(card){
+        var id=idOf(card);
+        if(id==null)return;
+        card.removeAttribute('onclick');
+        card.addEventListener('click',function(e){
+          if(e.target.closest('button'))return;
+          e.preventDefault();e.stopPropagation();
+          if(typeof w.openProductModal==='function')w.openProductModal(id);
+        });
+      });
+      d.querySelectorAll('.product-buy-now').forEach(function(btn){
+        var id=idOf(btn);
+        if(id==null)return;
+        btn.removeAttribute('onclick');
+        btn.setAttribute('type','button');
+        btn.addEventListener('click',function(e){
+          e.preventDefault();e.stopPropagation();
+          if(typeof w.addToCart==='function')w.addToCart(id);
+        });
+      });
+      d.querySelectorAll('.checkout-btn').forEach(function(btn){
+        btn.setAttribute('type','button');
+        btn.removeAttribute('onclick');
+        btn.addEventListener('click',function(e){
+          e.preventDefault();e.stopPropagation();
+          if(typeof w.checkout==='function')w.checkout();
+        });
+      });
+    }catch(e){console.error('EasyMarket click fix',e)}
+  }
+  frame.addEventListener('load',function(){setup();setTimeout(setup,300);setTimeout(setup,1000);setTimeout(setup,2000);});
 })();
 </script>
-</head>
-<body style="margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif"></body>
+</body>
 </html>
