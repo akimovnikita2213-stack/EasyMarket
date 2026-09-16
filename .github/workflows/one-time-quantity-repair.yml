@@ -1,0 +1,88 @@
+name: One-time quantity pricing repair
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repair quantity pricing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          fix = Path('telegram-fix.js')
+          helper = fix.read_text(encoding='utf-8')
+          if 'EM-PRICE-OPTIONS-POSTSYNC' not in helper:
+              marker = '  function start(){expose();clicks();sellerVariants();setTimeout(function(){expose();sellerVariants()},700);setTimeout(function(){expose();sellerVariants()},1800)}'
+              replacement = r'''  /* EM-PRICE-OPTIONS-POSTSYNC: seller variants are stored in details and mirrored to products.price_options. */
+  function sellerPriceOptionsSync(){
+    var original=window.saveSellerProduct;
+    if(typeof original!=="function"||original.__emPricePostSync)return;
+    async function wrapped(ev){
+      var nameEl=document.getElementById('sellerProductName');
+      var name=nameEl?String(nameEl.value||'').trim():'';
+      var me=null;
+      try{me=await (typeof getMyUserRecord==='function'?getMyUserRecord():null)}catch(e){}
+      var sid=me&&me.telegram_id?String(me.telegram_id):'';
+      var raw=document.getElementById('sellerProductPriceOptions');
+      var opts=[];
+      try{opts=JSON.parse(raw?raw.value:'[]')}catch(e){opts=[]}
+      if(!Array.isArray(opts)||!opts.length)return original.call(this,ev);
+      var result=await original.call(this,ev);
+      try{
+        if(window.supabaseClient&&sid&&name){
+          var q=await supabaseClient.from('products').select('id,name,price').eq('seller_id',Number(sid)).eq('name',name).order('id',{ascending:false}).limit(1).maybeSingle();
+          if(q&&q.data&&q.data.id){
+            await supabaseClient.from('products').update({price:Number(opts[0].price||0),price_options:opts}).eq('id',q.data.id);
+          }
+        }
+      }catch(e){console.warn('price_options sync',e)}
+      return result;
+    }
+    wrapped.__emPricePostSync=true;
+    window.saveSellerProduct=wrapped;
+  }
+  function start(){expose();clicks();sellerVariants();sellerPriceOptionsSync();setTimeout(function(){expose();sellerVariants();sellerPriceOptionsSync()},700);setTimeout(function(){expose();sellerVariants();sellerPriceOptionsSync()},1800)}'''
+              if marker not in helper:
+                  raise SystemExit('telegram-fix.js marker not found')
+              helper = helper.replace(marker, replacement)
+              fix.write_text(helper, encoding='utf-8')
+          p=Path('index.html')
+          html=p.read_text(encoding='utf-8')
+          tag='<script src="./telegram-fix.js"></script>'
+          if tag not in html:
+              if '</body>' not in html:
+                  raise SystemExit('index.html has no closing body tag')
+              html=html.replace('</body>', tag+'\n</body>', 1)
+              p.write_text(html, encoding='utf-8')
+          PY
+      - name: Validate JavaScript
+        run: |
+          node --check telegram-fix.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess
+          html=Path('index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>',html,re.I)
+          for i,s in enumerate(scripts):
+              if not s.strip(): continue
+              f=Path(f'/tmp/easymarket-inline-{i}.js')
+              f.write_text(s,encoding='utf-8')
+              r=subprocess.run(['node','--check',str(f)],capture_output=True,text=True)
+              if r.returncode:
+                  print(r.stderr)
+                  raise SystemExit(1)
+          print('All inline scripts: OK')
+          PY
+      - name: Commit repair and remove this one-time workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html telegram-fix.js
+          git rm .github/workflows/one-time-quantity-repair.yml
+          git commit -m 'Repair quantity and price options'
+          git push
