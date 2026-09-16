@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>EasyMarket</title>
+<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#0b0d12}iframe{display:block;width:100%;height:100%;border:0}</style>
+</head>
+<body>
+<iframe id="app" src="./index34.html?build=46"></iframe>
+<script>
+const frame=document.getElementById('app');
+frame.addEventListener('load',()=>{
+ try{
+  const d=frame.contentDocument;
+  const h=d.head;
+  const st=d.createElement('style');
+  st.textContent=`#sellerPublishProductBtn{width:100%!important;min-height:54px!important;height:54px!important;padding:14px 16px!important;border-radius:13px!important;font-size:16px!important;font-weight:800!important;display:block!important;box-sizing:border-box!important}#em46Variants{margin:14px 0;padding:14px;background:#12151c;border:1px solid #292d38;border-radius:16px}.em46row{display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:7px;margin-bottom:8px}.em46row input{width:100%;min-width:0;padding:11px;border-radius:10px;border:1px solid #303542;background:#191c25;color:#fff;box-sizing:border-box}.em46del,.em46add{border:0;border-radius:10px;background:#252934;color:#fff}.em46add{width:100%;height:44px;font-weight:800}`;
+  h.appendChild(st);
+  const install=()=>{
+   const btn=d.getElementById('sellerPublishProductBtn');
+   const photo=d.getElementById('sellerProductImage');
+   if(btn&&photo&&!d.getElementById('em46Variants')){
+    const w=d.createElement('div');w.id='em46Variants';w.innerHTML='<b style="display:block;margin-bottom:10px">Варианты товара</b><div id="em46list"></div><button id="em46add" class="em46add" type="button">＋ Добавить вариант</button><div style="color:#8d93a2;font-size:12px;margin-top:7px">Количество • Цена ₽ • Остаток</div>';
+    photo.parentNode.insertBefore(w,photo);
+    const list=d.getElementById('em46list'),add=d.getElementById('em46add');
+    function row(q='',p='',s='1'){const x=d.createElement('div');x.className='em46row';x.innerHTML='<input type="number" min="1" placeholder="Количество" value="'+q+'"><input type="number" min="0" step="1" placeholder="Цена ₽" value="'+p+'"><input type="number" min="1" placeholder="Остаток" value="'+s+'"><button class="em46del" type="button">×</button>';x.querySelector('button').onclick=()=>{if(list.children.length>1)x.remove()};list.appendChild(x)}
+    row(1,'','1');add.onclick=()=>row();
+   }
+  };
+  install();
+  setTimeout(install,500);setTimeout(install,1500);setTimeout(install,3000);
+ }catch(e){console.error(e)}
+});
+</script>
+</body>
+</html>
