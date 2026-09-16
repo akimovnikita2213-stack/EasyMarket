@@ -10,19 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Repair product and cart functions
+      - name: Append robust functional layer
         run: |
-          python3 -c "import base64;from pathlib import Path;p=Path('index.html');s=p.read_text(encoding='utf-8');marker='/* EM-FUNCTIONAL-FIX-2026-09-16 */';patch=base64.b64decode('ClwvKiBFTS1GVU5DVElPTkFMLUZJWC0yMDI2LTA5LTE2ICovCihmdW5jdGlvbigpewogIGNvbnN0IHByb2R1Y3RCeUlkPWlkPT5wcm9kdWN0cy5maW5kKHg9Pk51bWJlcngoLmlkKT09PU51bWJlcihpZCkpOwogIGNvbnN0IG9wdHM9cD0+e2NvbnN0IGE9QXJyYXkuaXNBcnJheShwPy5wcmljZV9vcHRpb25zKT9wLnByaWNlX29wdGlvbnM6W107Y29uc3Qgbz1hLm1hcCh4PT57cXR5Ok51bWJlcih4LnF0eSkscHJpY2U6TnVtYmVyKHgucHJpY2UpLHN0b2NrOk51bWJlcih4LnN0b2NrPz9wLnN0b2NrPz8wKX0pLmZpbHRlcih4PT54LnF0eT4wJiZ4LnByaWNlPj0wKTtyZXR1cm4gby5sZW5ndGg/bzpbe3F0eToxLHByaWNlOk51bWJlcihwPy5wcmljZXx8MCksc3RvY2s6TnVtYmVyKHA/LnN0b2NrfHwwKX19OwogIHdpbmRvdy5vcGVuUHJvZHVjdE1vZGFsPWZ1bmN0aW9uKGlkLHEpe2NvbnN0IHA9cHJvZHVjdEJ5SWQoaWQpO2lmKCFwKXtzaG93VG9hc3QoJ1RvdmFyIG5lIG5haWRlbicpO3JldHVybn1pZihwLnNlbGxlcl9pZCYmU3RyaW5nKHAuYXBwcm92YWxfc3RhdHVzfHwnYXBwcm92ZWQnKT09PSd3YXRjaGluZycpIHtzaG93VG9hc3QoJ1RvdmFyIGVzeGUgbmUgcHVibGlrb3ZhbiBwbG9zaGFkb2thJyk7cmV0dXJufWNvbnN0IG9zPW9wdHMocCk7bGV0IHM9b3MuZmluZChvPT5vLnF0eT09PU51bWJlcihxKSk7aWYoIXMpcz1vcy5maW5kKG89Pm8uc3RvY2s+MCk+fG9zWzBdO2NvbnN0IGM9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Byb2R1Y3RNb2RhbENvbnRlbnQnKTtpZighYyl0aHJvdyBuZXcgRXJyb3IoJ2NvbnRlbnQnKTtjb25zdCBtPXAuaW1hZ2VfdXJsPz48aW1nIGNsYXNzPVwicHJvZHVjdC1tb2RhbC1pbWFnZVwiIHNyYz1cIiInK2VzY2FwZUhtbDw8Lz4i':'');\n" )
-          PYTHON_UNUSED=true
+          cat repair.js >> index.html
       - name: Commit repaired index
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Repair product opening, checkout and cart without changing design' || true
+          git commit -m 'Repair product opening and cart while preserving stable design'
           git push
-      - name: Remove temporary workflow
+      - name: Remove temporary files
         run: |
-          git rm .github/workflows/repair-ui.yml
-          git commit -m 'Remove temporary repair workflow' || true
+          git rm repair.js .github/workflows/repair-ui.yml
+          git commit -m 'Remove temporary repair files'
           git push
