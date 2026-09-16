@@ -1,5 +1,7 @@
 name: Fix Telegram shop buttons only
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: write
@@ -13,10 +15,10 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
-          # Remove only literal escaped newline-only text that can appear below the products.
-          import re
+          # Remove only literal escaped newline-only text nodes/content.
           s=re.sub(r'(?<![A-Za-z0-9])(?:\\\\n[ \\t]*){2,}(?![A-Za-z0-9])', '', s)
           fix=r'''
 <script id="telegram-shop-button-fix">
@@ -31,7 +33,6 @@ jobs:
   document.addEventListener('DOMContentLoaded', expose, {once:true});
   setTimeout(expose, 0);
   setTimeout(expose, 500);
-
   function cleanStrayNewlines(){
     var root=document.body;
     if(!root)return;
