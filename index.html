@@ -4681,5 +4681,19 @@ document.addEventListener("click", function(e){
 })();
 </script>
 
+
+<script id="easymarket-global-actions">
+(function(){
+  const names = [
+    'openProductModal','closeProductModal','addToCart','addToCartFromModal','buyNow',
+    'openCart','closeCart','changeCartQuantity','removeFromCart','checkout',
+    'setCategory','renderProducts','selectProductQuantity'
+  ];
+  names.forEach(function(name){
+    try { if (typeof window[name] !== 'function' && typeof globalThis[name] === 'function') window[name] = globalThis[name]; } catch(e) {}
+  });
+})();
+</script>
+
 </body>
 </html>
