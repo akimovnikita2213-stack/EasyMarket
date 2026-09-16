@@ -1,0 +1,151 @@
+name: Fix product actions and quantity options
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch functionality only
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          marker = '<script id="em-product-actions-fix">'
+          if marker in s:
+              print('Fix already installed')
+              raise SystemExit(0)
+          css = r'''
+<style id="em-product-actions-fix-css">
+.em-qty-wrap{margin:14px 0 6px}
+.em-qty-title{font-size:13px;color:#9db1cc;font-weight:700;margin-bottom:8px}
+.em-qty-list{display:flex;flex-wrap:wrap;gap:8px}
+.em-qty-btn{border:1px solid rgba(96,165,250,.22);background:#0b1c35;color:#f8fbff;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}
+.em-qty-btn.active{background:linear-gradient(135deg,#2563eb,#0ea5e9);border-color:#60a5fa;color:#fff}
+html.light-theme .em-qty-title{color:#5d6d85}
+html.light-theme .em-qty-btn{background:#fff;color:#0b1730;border-color:#cfdced}
+html.light-theme .em-qty-btn.active{background:linear-gradient(135deg,#2563eb,#0ea5e9);border-color:#2563eb;color:#fff}
+.em-card-qty{margin:8px 0 10px;display:flex;gap:6px;flex-wrap:wrap}
+.em-card-qty .em-qty-btn{padding:6px 9px;font-size:11px}
+</style>
+'''
+          js = r'''
+<script id="em-product-actions-fix">
+(function(){
+  const URL='https://uhmgjcoyxehknkehfbbj.supabase.co';
+  const KEY='sb_publishable_7Bn4Azfm58BkIJS_6vSsUw_qbGS4wTH';
+  const client=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(URL,KEY):null;
+  let products=[];
+  let selectedQty={};
+  const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+  function options(p){
+    let a=p&&p.price_options;
+    if(typeof a==='string'){try{a=JSON.parse(a)}catch(e){a=[]}}
+    if(!Array.isArray(a)) a=[];
+    a=a.map(x=>({qty:Number(x.qty),price:Number(x.price)})).filter(x=>x.qty>0&&x.price>=0&&Number.isFinite(x.qty)&&Number.isFinite(x.price));
+    if(!a.length && p&&p.details){
+      const m=String(p.details).match(/<!--EM_PRICES:(.*?)-->/s);
+      if(m){try{const q=JSON.parse(m[1]);if(Array.isArray(q))a=q.map(x=>({qty:Number(x.qty),price:Number(x.price)})).filter(x=>x.qty>0&&x.price>=0)}catch(e){}}
+    }
+    if(!a.length) a=[{qty:1,price:Number(p?.price||0)}];
+    a.sort((x,y)=>x.qty-y.qty); return a;
+  }
+  function find(id){return products.find(p=>Number(p.id)===Number(id));}
+  function render(){
+    const box=document.getElementById('products'); if(!box)return;
+    const search=(document.getElementById('searchInput')?.value||'').trim().toLowerCase();
+    const cat=window.currentCategory||'all';
+    const list=products.filter(p=>String(p.approval_status||'approved')==='approved'&&(!p.seller_id||String(p.approval_status||'approved')==='approved')&&(cat==='all'||p.category===cat)&&(!search||String(p.name||'').toLowerCase().includes(search)||String(p.description||'').toLowerCase().includes(search)));
+    if(!list.length){box.innerHTML='<div class="empty">Товары не найдены 📦</div>';return;}
+    box.innerHTML=list.map(p=>{
+      const os=options(p), q=selectedQty[p.id]||os[0].qty, chosen=os.find(x=>x.qty===Number(q))||os[0];
+      return `<div class="product" data-em-product-id="${Number(p.id)}">
+        ${p.image_url?`<img class="product-image" src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy">`:`<div class="product-icon">${esc(p.icon||'📦')}</div>`}
+        <div class="product-name">${esc(p.name)}</div>
+        <div class="product-description">${esc(String(p.description||'').replace(/<!--EM_PRICES:.*?-->/s,'').trim())}</div>
+        ${p.seller_id||p.seller_username?`<div class="product-seller seller-link" data-em-seller-id="${esc(p.seller_id||'')}" data-em-seller-name="${esc(p.seller_username||'')}">🏪 Продавец · <b>${esc(String(p.seller_username||'Продавец').replace(/^@/,''))}</b></div>`:''}
+        <div class="em-card-qty">${os.map(o=>`<button type="button" class="em-qty-btn ${Number(o.qty)===Number(q)?'active':''}" data-em-qty="${o.qty}" data-em-card="${Number(p.id)}">${o.qty} шт · ${o.price} ₽</button>`).join('')}</div>
+        <div class="product-bottom"><div class="product-cart-action"><div class="price">${chosen.price} ₽</div><button type="button" class="buy-btn product-buy-now" data-em-buy="${Number(p.id)}" data-em-buy-qty="${chosen.qty}">⚡ Оформить</button></div></div>
+      </div>`;
+    }).join('');
+  }
+  async function load(){
+    if(!client)return;
+    const r=await client.from('products').select('*').order('id',{ascending:false});
+    if(r.error){console.error('EM product load',r.error);return;}
+    products=(r.data||[]).filter(p=>!p.seller_id||String(p.approval_status||'approved')==='approved');
+    window.__emProducts=products; render();
+  }
+  function callOriginalAdd(id,qty){
+    const f=window.__emOriginalAddToCart||window.addToCart;
+    if(typeof f==='function') return f(Number(id),Number(qty));
+    return false;
+  }
+  function modal(id,qty){
+    const p=find(id); if(!p){load().then(()=>modal(id,qty));return;}
+    const os=options(p); const chosen=os.find(x=>x.qty===Number(qty))||os[0]; selectedQty[p.id]=chosen.qty;
+    const c=document.getElementById('productModalContent'); const m=document.getElementById('productModal'); if(!c||!m)return;
+    const media=p.image_url?`<img class="product-modal-image" src="${esc(p.image_url)}" alt="${esc(p.name)}">`:`<div class="product-modal-icon">${esc(p.icon||'📦')}</div>`;
+    c.innerHTML=`${media}<div class="product-modal-title">${esc(p.name)}</div><div class="product-modal-price" id="modalSelectedPrice">${chosen.price} ₽</div>
+      <div class="em-qty-wrap"><div class="em-qty-title">Количество</div><div class="em-qty-list">${os.map(o=>`<button type="button" class="em-qty-btn ${o.qty===chosen.qty?'active':''}" data-em-modal-qty="${o.qty}" data-em-modal-id="${Number(p.id)}">${o.qty} шт · ${o.price} ₽</button>`).join('')}</div></div>
+      ${p.description?`<div class="product-modal-label">Описание</div><div class="product-modal-text">${esc(String(p.description).replace(/<!--EM_PRICES:.*?-->/s,'').trim())}</div>`:''}
+      ${p.details?`<div class="product-modal-label">Детали</div><div class="product-modal-text">${esc(String(p.details).replace(/<!--EM_PRICES:.*?-->/s,'').trim())}</div>`:''}
+      <div class="product-modal-actions"><button type="button" class="buy-btn product-buy-now" data-em-modal-buy="${Number(p.id)}">⚡ Оформить</button></div>`;
+    m.classList.add('open');document.body.style.overflow='hidden';
+  }
+  function add(id,qty){
+    const ok=callOriginalAdd(id,qty);
+    if(ok!==false){document.getElementById('productModal')?.classList.remove('open');return true;}
+    return false;
+  }
+  document.addEventListener('click',function(e){
+    const q=e.target.closest('[data-em-qty]');
+    if(q){e.preventDefault();e.stopPropagation();const id=Number(q.dataset.emCard),qty=Number(q.dataset.emQty);selectedQty[id]=qty;render();return;}
+    const mbq=e.target.closest('[data-em-modal-qty]');
+    if(mbq){e.preventDefault();e.stopPropagation();const id=Number(mbq.dataset.emModalId),qty=Number(mbq.dataset.emModalQty);modal(id,qty);return;}
+    const buy=e.target.closest('[data-em-buy]');
+    if(buy){e.preventDefault();e.stopPropagation();add(Number(buy.dataset.emBuy),Number(buy.dataset.emBuyQty));return;}
+    const mb=e.target.closest('[data-em-modal-buy]');
+    if(mb){e.preventDefault();e.stopPropagation();const id=Number(mb.dataset.emModalBuy);add(id,Number(selectedQty[id]||options(find(id))[0].qty));return;}
+    const seller=e.target.closest('[data-em-seller-id]');
+    if(seller){e.preventDefault();e.stopPropagation();if(typeof window.openSellerProfile==='function')window.openSellerProfile(seller.dataset.emSellerId||'',seller.dataset.emSellerName||'');return;}
+    const card=e.target.closest('[data-em-product-id]');
+    if(card){e.preventDefault();e.stopPropagation();modal(Number(card.dataset.emProductId),selectedQty[Number(card.dataset.emProductId)]);return;}
+  },true);
+  document.getElementById('searchInput')?.addEventListener('input',render);
+  window.__emOriginalAddToCart=window.addToCart;
+  window.__emOriginalOpenProductModal=window.openProductModal;
+  window.openProductModal=modal;
+  window.__emReloadProducts=load;
+  window.addToCartFromModal=function(id,qty){return add(id,qty)};
+  window.__emCartFixReady=true;
+  setTimeout(load,0);
+  setTimeout(load,900);
+})();
+</script>
+'''
+          s=s.replace('</body>',css+'\n'+js+'\n</body>',1)
+          p.write_text(s,encoding='utf-8')
+          print('Patched index.html')
+          PY
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then echo 'No changes'; exit 0; fi
+          git commit -m 'Fix product modal quantity selection and cart action'
+          git push
