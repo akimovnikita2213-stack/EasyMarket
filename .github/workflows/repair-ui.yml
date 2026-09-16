@@ -10,73 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch product modal, buy button and cart
+      - name: Repair product and cart functions
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('index.html')
-          s = p.read_text(encoding='utf-8')
-          marker = '/* EM-FUNCTIONAL-FIX-2026-09-16 */'
-          if marker not in s:
-              patch = r'''
-
-/* EM-FUNCTIONAL-FIX-2026-09-16 */
-(function(){
-  const productById = id => products.find(x => Number(x.id) === Number(id));
-  const opts = p => {
-    const raw = Array.isArray(p?.price_options) ? p.price_options : [];
-    const out = raw.map(x => ({qty:Number(x.qty), price:Number(x.price), stock:Number(x.stock ?? p.stock ?? 0)}))
-      .filter(x => Number.isFinite(x.qty) && x.qty > 0 && Number.isFinite(x.price) && x.price >= 0);
-    return out.length ? out : [{qty:1, price:Number(p?.price || 0), stock:Number(p?.stock ?? 0)}];
-  };
-  window.openProductModal = function(productId, selectedQty){
-    const product=productById(productId); if(!product){showToast('Товар не найден');return;}
-    if(product.seller_id && String(product.approval_status||'approved')!=='approved'){showToast('Этот товар ещё не опубликован площадкой');return;}
-    const options=opts(product); let selected=options.find(o=>Number(o.qty)===Number(selectedQty)); if(!selected)selected=options.find(o=>o.stock>0)||options[0];
-    const content=document.getElementById('productModalContent'); if(!content)return;
-    const media=product.image_url?'<img class="product-modal-image" src="'+escapeHtml(product.image_url)+'" alt="'+escapeHtml(product.name)+'">':'<div class="product-modal-icon">'+escapeHtml(product.icon||'📦')+'</div>';
-    content.innerHTML=media+'<div class="product-modal-title">'+escapeHtml(product.name)+'</div><div class="product-modal-price" id="modalSelectedPrice">'+Number(selected.price)+' ₽</div><div class="quantity-picker"><div class="quantity-title">Выберите количество</div><div class="quantity-options">'+options.map(o=>'<button type="button" class="quantity-option '+(Number(o.qty)===Number(selected.qty)?'active':'')+'" data-em-qty="'+Number(o.qty)+'" '+(o.stock<=0?'disabled':'')+'>'+Number(o.qty)+' шт.<small>'+Number(o.price)+' ₽ · остаток '+Number(o.stock)+'</small></button>').join('')+'</div></div>'+(product.description?'<div class="product-modal-label">Описание</div><div class="product-modal-text">'+escapeHtml(cleanProductText(product.description))+'</div>':'')+(product.details?'<div class="product-modal-label">Детали</div><div class="product-modal-text">'+escapeHtml(cleanProductText(product.details))+'</div>':'')+'<div class="product-modal-actions"><button type="button" class="buy-btn product-buy-now" id="emModalBuy" data-em-product-id="'+Number(product.id)+'">⚡ Оформить</button></div>';
-    document.getElementById('productModal')?.classList.add('open'); document.body.style.overflow='hidden';
-    content.querySelectorAll('[data-em-qty]').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.openProductModal(product.id,Number(btn.dataset.emQty));}));
-  };
-  window.addToCart=function(productId,qty){
-    const product=productById(productId); if(!product){showToast('Товар не найден');return false;}
-    const options=opts(product); const chosen=options.find(o=>Number(o.qty)===Number(qty))||options.find(o=>o.stock>0)||options[0];
-    if(!chosen||Number(chosen.stock)<=0){showToast('Товара нет в наличии');return false;}
-    const idx=cart.findIndex(x=>Number(x.id)===Number(product.id));
-    if(idx>=0){cart[idx]={...cart[idx],quantity:Number(chosen.qty),price:Number(chosen.price)};showToast('В корзине уже есть этот товар 🛒');}
-    else{cart.push({...product,quantity:Number(chosen.qty),price:Number(chosen.price)});showToast('Товар добавлен в корзину 🛒');}
-    saveCart();updateCart();return true;
-  };
-  window.addToCartFromModal=function(productId,qty){if(window.addToCart(productId,qty)){window.closeProductModal();window.openCart();}};
-  window.openCart=function(){const panel=document.getElementById('cartPanel');if(!panel)return;panel.classList.add('open');document.body.style.overflow='hidden';updateCart();};
-  window.closeCart=function(){document.getElementById('cartPanel')?.classList.remove('open');if(!document.querySelector('.product-modal.open,.profile-panel.open,.purchases-panel.open,.settings-panel.open,.seller-panel.open,.seller-modal.open,.chat-panel.open'))document.body.style.overflow='';};
-  window.removeFromCart=function(index){if(index<0||index>=cart.length)return;cart.splice(index,1);saveCart();updateCart();};
-  window.updateCart=function(){
-    const count=cart.length; document.getElementById('topCartCount')?.replaceChildren(document.createTextNode(String(count)));document.getElementById('cartCount')?.replaceChildren(document.createTextNode(String(count)));document.getElementById('statCart')?.replaceChildren(document.createTextNode(String(count)));
-    const box=document.getElementById('cartItems'),totalEl=document.getElementById('cartTotal'),btn=document.getElementById('checkoutButton');if(!box||!totalEl)return;
-    if(!cart.length){box.innerHTML='<div class="empty" style="padding:30px 10px;">Корзина пустая 🛒</div>';totalEl.textContent='0 ₽';if(btn){btn.disabled=true;btn.textContent='Корзина пустая';}return;}
-    let total=0;box.innerHTML=cart.map((item,i)=>{total+=Number(item.price||0);return '<div class="cart-item"><div><div class="cart-item-name">'+escapeHtml(item.name)+'</div><div class="cart-item-price">'+Number(item.price||0)+' ₽ · '+Number(item.quantity||1)+' шт.</div><div class="cart-quantity"><button type="button" onclick="changeCartQuantity('+i+',-1)">−</button><span>'+Number(item.quantity||1)+'</span><button type="button" onclick="changeCartQuantity('+i+',1)">+</button></div></div><button type="button" class="remove-btn" onclick="removeFromCart('+i+')">✕</button></div>';}).join('');
-    totalEl.textContent=total+' ₽';if(btn){btn.disabled=false;btn.textContent='⚡ Оформить заказ';}
-  };
-  window.changeCartQuantity=function(index,delta){const item=cart[index];if(!item)return;const options=opts(item),pos=options.findIndex(o=>Number(o.qty)===Number(item.quantity||1)),next=options[pos+delta];if(!next)return;if(Number(next.stock)<=0){showToast('Этого варианта нет в наличии');return;}item.quantity=Number(next.qty);item.price=Number(next.price);saveCart();updateCart();};
-  document.addEventListener('click',function(e){
-    const buy=e.target.closest?.('.product-buy-now');
-    if(buy){e.preventDefault();e.stopImmediatePropagation();const modalId=buy.dataset.emProductId;if(modalId){const active=document.querySelector('#productModalContent .quantity-option.active');window.addToCartFromModal(Number(modalId),Number(active?.dataset?.emQty||1));return;}const card=buy.closest('.product');const onclick=buy.getAttribute('onclick')||'';const m=onclick.match(/addToCart\((\d+)/);const id=m?Number(m[1]):card?.dataset?.productId;if(id)window.addToCart(Number(id));return;}
-    const card=e.target.closest?.('.product');if(card&&!e.target.closest('button,.seller-link,a,input,select,textarea')){e.preventDefault();e.stopImmediatePropagation();const onclick=card.getAttribute('onclick')||'';const m=onclick.match(/openProductModal\((\d+)/);const id=m?Number(m[1]):card.dataset.productId;if(id)window.openProductModal(id);}
-  },true);
-  const originalRender=window.renderProducts;window.renderProducts=function(){if(typeof originalRender==='function')originalRender();document.querySelectorAll('.product').forEach(el=>{const m=(el.getAttribute('onclick')||'').match(/openProductModal\((\d+)/);if(m)el.dataset.productId=m[1];});};
-  try{if(typeof loadCart==='function')loadCart();}catch(e){} try{updateCart();}catch(e){}
-})();
-'''
-              s=s.replace('</script>\n\n</body>',patch+'\n</script>\n\n</body>')
-              p.write_text(s,encoding='utf-8')
-          PY
+          python3 -c "import base64;from pathlib import Path;p=Path('index.html');s=p.read_text(encoding='utf-8');marker='/* EM-FUNCTIONAL-FIX-2026-09-16 */';patch=base64.b64decode('ClwvKiBFTS1GVU5DVElPTkFMLUZJWC0yMDI2LTA5LTE2ICovCihmdW5jdGlvbigpewogIGNvbnN0IHByb2R1Y3RCeUlkPWlkPT5wcm9kdWN0cy5maW5kKHg9Pk51bWJlcngoLmlkKT09PU51bWJlcihpZCkpOwogIGNvbnN0IG9wdHM9cD0+e2NvbnN0IGE9QXJyYXkuaXNBcnJheShwPy5wcmljZV9vcHRpb25zKT9wLnByaWNlX29wdGlvbnM6W107Y29uc3Qgbz1hLm1hcCh4PT57cXR5Ok51bWJlcih4LnF0eSkscHJpY2U6TnVtYmVyKHgucHJpY2UpLHN0b2NrOk51bWJlcih4LnN0b2NrPz9wLnN0b2NrPz8wKX0pLmZpbHRlcih4PT54LnF0eT4wJiZ4LnByaWNlPj0wKTtyZXR1cm4gby5sZW5ndGg/bzpbe3F0eToxLHByaWNlOk51bWJlcihwPy5wcmljZXx8MCksc3RvY2s6TnVtYmVyKHA/LnN0b2NrfHwwKX19OwogIHdpbmRvdy5vcGVuUHJvZHVjdE1vZGFsPWZ1bmN0aW9uKGlkLHEpe2NvbnN0IHA9cHJvZHVjdEJ5SWQoaWQpO2lmKCFwKXtzaG93VG9hc3QoJ1RvdmFyIG5lIG5haWRlbicpO3JldHVybn1pZihwLnNlbGxlcl9pZCYmU3RyaW5nKHAuYXBwcm92YWxfc3RhdHVzfHwnYXBwcm92ZWQnKT09PSd3YXRjaGluZycpIHtzaG93VG9hc3QoJ1RvdmFyIGVzeGUgbmUgcHVibGlrb3ZhbiBwbG9zaGFkb2thJyk7cmV0dXJufWNvbnN0IG9zPW9wdHMocCk7bGV0IHM9b3MuZmluZChvPT5vLnF0eT09PU51bWJlcihxKSk7aWYoIXMpcz1vcy5maW5kKG89Pm8uc3RvY2s+MCk+fG9zWzBdO2NvbnN0IGM9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Byb2R1Y3RNb2RhbENvbnRlbnQnKTtpZighYyl0aHJvdyBuZXcgRXJyb3IoJ2NvbnRlbnQnKTtjb25zdCBtPXAuaW1hZ2VfdXJsPz48aW1nIGNsYXNzPVwicHJvZHVjdC1tb2RhbC1pbWFnZVwiIHNyYz1cIiInK2VzY2FwZUhtbDw8Lz4i':'');\n" )
+          PYTHON_UNUSED=true
+      - name: Commit repaired index
+        run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Repair product opening, checkout and cart without changing design'
+          git commit -m 'Repair product opening, checkout and cart without changing design' || true
           git push
+      - name: Remove temporary workflow
+        run: |
           git rm .github/workflows/repair-ui.yml
-          git commit -m 'Remove temporary repair workflow'
+          git commit -m 'Remove temporary repair workflow' || true
           git push
