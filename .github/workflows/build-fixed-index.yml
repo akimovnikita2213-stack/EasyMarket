@@ -1,8 +1,6 @@
 name: Build clean fixed EasyMarket index
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -14,77 +12,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Remove broken bridge and keep original UI
+      - name: Keep current working index unchanged
         shell: bash
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          path = Path('index.html')
-          src = path.read_text(encoding='utf-8')
-
-          # Remove the previously injected Telegram bridge only.
-          src = re.sub(
-              r'\\n<script id="easymarket-telegram-interaction-bridge">.*?</script>\\n',
-              '\n', src, flags=re.S
-          )
-          src = re.sub(
-              r'<script id="easymarket-telegram-interaction-bridge">.*?</script>',
-              '', src, flags=re.S
-          )
-
-          # Remove the old broken robust layer only; preserve everything else.
-          marker = '/* EM-ROBUST-FUNCTIONAL-LAYER-2026-09-16 */'
-          if marker in src:
-              src = src.split(marker, 1)[0].rstrip() + '\n'
-
-          # Remove stray literal backslash-n text that was produced by the old bridge.
-          src = src.replace('\\n\\n \\n\\n \\n\\n', '')
-          src = src.replace('\\n\\n', '') if src.rstrip().endswith('\\n\\n') else src
-
-          # Expose the EXISTING app functions to Telegram WebView inline handlers.
-          bind = '''
-  try {
-    window.openProductModal = openProductModal;
-    window.closeProductModal = closeProductModal;
-    window.addToCart = addToCart;
-    window.addToCartFromModal = addToCartFromModal;
-    window.buyNow = buyNow;
-    window.openCart = openCart;
-    window.closeCart = closeCart;
-    window.changeCartQuantity = changeCartQuantity;
-    window.removeFromCart = removeFromCart;
-    window.checkout = checkout;
-    window.setCategory = setCategory;
-    window.renderProducts = renderProducts;
-    window.selectProductQuantity = selectProductQuantity;
-  } catch (e) {
-    console.warn('EasyMarket action binding failed', e);
-  }
-'''
-          if 'window.openProductModal = openProductModal;' not in src:
-              pos = src.rfind('</script>')
-              if pos == -1:
-                  raise SystemExit('No closing script tag found')
-              src = src[:pos] + bind + src[pos:]
-
-          # Keep a single clean document; do not alter CSS/design.
-          path.write_text(src, encoding='utf-8')
-          Path('index-fixed.html').write_text(src, encoding='utf-8')
-          Path('index-final.html').write_text(src, encoding='utf-8')
-          PY
-
+          cp index.html index-fixed.html
+          cp index.html index-final.html
       - name: Commit fixed files
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html index-fixed.html index-final.html
+          git add index-fixed.html index-final.html
           if git diff --cached --quiet; then
             echo "No changes"
           else
-            git commit -m "Fix Telegram product modal quantity and cart buttons"
+            git commit -m "Sync final page with working EasyMarket index"
             git push
           fi
