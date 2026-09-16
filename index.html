@@ -1,105 +1,50 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>EasyMarket</title>
-</head>
-<body style="margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif">
-<div style="padding:20px;text-align:center;color:#9db1cc">Загрузка EasyMarket…</div>
-<script>
-(async()=>{
-  try{
-    const r=await fetch('./index34.html?build=48restore_'+Date.now(),{cache:'no-store'});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    let html=await r.text();
-    const patch=`
-<style id="em48-variants-style">
-#em48Variants{margin:14px 0;padding:14px;background:#12151c;border:1px solid #292d38;border-radius:16px}
-.em48row{display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:7px;margin-bottom:8px}
-.em48row input{width:100%;min-width:0;padding:11px;border-radius:10px;border:1px solid #303542;background:#191c25;color:#fff;box-sizing:border-box}
-.em48del,.em48add{border:0;border-radius:10px;background:#252934;color:#fff}.em48add{width:100%;height:44px;font-weight:800}
-#sellerPublishProductBtn{width:100%!important;min-height:54px!important;height:54px!important;padding:14px 16px!important;border-radius:13px!important;font-size:16px!important;font-weight:800!important;box-sizing:border-box!important}
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#090b18;--bg2:#15102b;--card:rgba(25,22,48,.92);--line:rgba(255,255,255,.1);--text:#fff;--muted:#aaa6c0;--violet:#8b5cf6;--pink:#ec4899;--cyan:#22d3ee;--green:#34d399}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;min-height:100%;background:radial-gradient(circle at 8% 8%,rgba(139,92,246,.3),transparent 30%),radial-gradient(circle at 92% 18%,rgba(236,72,153,.22),transparent 28%),linear-gradient(145deg,var(--bg),var(--bg2));color:var(--text);font-family:Arial,sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer}.app{max-width:1100px;margin:auto;padding:15px 15px 100px}.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px}.logo{font-size:25px;font-weight:900;letter-spacing:-1px}.logo b{background:linear-gradient(135deg,#a78bfa,#ec4899,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}.actions{display:flex;gap:8px}.icon{width:43px;height:43px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.06);color:#fff}.search input{width:100%;height:48px;border:1px solid var(--line);border-radius:15px;background:rgba(10,9,25,.7);color:#fff;padding:0 16px;outline:none}.cats{display:flex;gap:8px;overflow:auto;padding:12px 0}.cat{flex:0 0 auto;border:1px solid rgba(139,92,246,.25);background:rgba(139,92,246,.12);color:#c8c2db;padding:10px 14px;border-radius:12px}.cat.active{background:linear-gradient(135deg,var(--violet),var(--pink));color:#fff;border-color:transparent}.title{font-size:22px;font-weight:900;margin:8px 0 14px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}@media(min-width:700px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}.card{background:linear-gradient(145deg,rgba(31,27,58,.94),rgba(19,18,39,.94));border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:0 12px 35px rgba(0,0,0,.25);overflow:hidden}.card:active{transform:scale(.99)}.pic{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:13px;background:#171522;display:block}.emoji{width:100%;aspect-ratio:16/10;border-radius:13px;background:#171522;display:flex;align-items:center;justify-content:center;font-size:48px}.name{font-weight:800;font-size:16px;margin:10px 0 5px}.desc{font-size:12px;line-height:1.35;color:#9691aa;min-height:32px}.bottom{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-top:10px}.price{font-weight:900;white-space:nowrap}.buy{border:0;border-radius:11px;padding:10px 11px;background:linear-gradient(135deg,var(--violet),var(--pink));color:#fff;font-weight:800}.empty{text-align:center;color:#858196;padding:55px 10px;grid-column:1/-1}.overlay{position:fixed;inset:0;background:rgba(0,0,0,.74);backdrop-filter:blur(8px);display:none;align-items:flex-end;z-index:50}.overlay.open{display:flex}.sheet{width:100%;max-width:650px;max-height:92vh;overflow:auto;margin:auto auto 0;background:linear-gradient(145deg,#211c3b,#11101f);border:1px solid var(--line);border-radius:24px 24px 0 0;padding:17px;position:relative}.close{position:absolute;right:12px;top:12px;width:40px;height:40px;border:0;border-radius:50%;background:#252334;color:#fff;font-size:24px;z-index:2}.modalpic{width:100%;max-height:340px;object-fit:cover;border-radius:17px;background:#171522}.modalemoji{height:220px;border-radius:17px;background:#171522;display:flex;align-items:center;justify-content:center;font-size:80px}.modalname{font-size:24px;font-weight:900;margin:15px 45px 7px 0}.modalprice{font-size:22px;font-weight:900;margin:10px 0}.label{font-size:12px;color:#89849b;font-weight:800;margin:15px 0 7px}.text{white-space:pre-line;color:#d8d4e2;line-height:1.5}.variants{display:flex;gap:8px;flex-wrap:wrap}.variant{border:1px solid var(--line);background:#19172a;color:#fff;padding:10px 13px;border-radius:12px}.variant.active{background:linear-gradient(135deg,var(--violet),var(--pink));border-color:transparent}.modalbuy{width:100%;height:54px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--violet),var(--pink));color:#fff;font-size:16px;font-weight:900;margin-top:16px}.cartbox{max-width:650px}.cartrow{display:flex;gap:10px;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line)}.cartrow b{display:block}.muted{color:#8f8aa2;font-size:12px;margin-top:4px}.remove{border:0;background:#272434;color:#fff;border-radius:9px;padding:8px 10px}.total{display:flex;justify-content:space-between;font-size:20px;font-weight:900;margin:18px 0}.checkout{width:100%;height:54px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--violet),var(--pink));color:#fff;font-weight:900;font-size:16px}.checkout:disabled{opacity:.55}.seller{display:none}.toast{position:fixed;left:50%;bottom:25px;transform:translateX(-50%);background:#252236;border:1px solid var(--line);padding:12px 16px;border-radius:13px;z-index:100;color:#fff;box-shadow:0 12px 30px rgba(0,0,0,.35)}
 </style>
+</head>
+<body>
+<div class="app">
+  <div class="top"><div class="logo">Easy<b>Market</b></div><div class="actions"><button class="icon" id="refresh" type="button">↻</button><button class="icon" id="cart" type="button">🛒</button></div></div>
+  <div class="search"><input id="search" type="search" placeholder="Поиск товара..."></div>
+  <div class="cats" id="cats"><button class="cat active" type="button" data-cat="all">Все</button><button class="cat" type="button" data-cat="games">🎮 Игры</button><button class="cat" type="button" data-cat="accounts">👤 Аккаунты</button><button class="cat" type="button" data-cat="services">🛠 Услуги</button><button class="cat" type="button" data-cat="other">📦 Другое</button></div>
+  <div class="title">Товары</div>
+  <div class="grid" id="products"><div class="empty">Загрузка товаров…</div></div>
+</div>
+<div class="overlay" id="productOverlay"><div class="sheet"><button class="close" id="productClose" type="button">×</button><div id="productBody"></div></div></div>
+<div class="overlay" id="cartOverlay"><div class="sheet cartbox"><button class="close" id="cartClose" type="button">×</button><div class="modalname">Корзина</div><div id="cartBody"></div></div></div>
+<div id="toastRoot"></div>
 <script>
-(function(){
-  function install(){
-    const btn=document.getElementById('sellerPublishProductBtn');
-    const photo=document.getElementById('sellerProductImage');
-    if(!btn||!photo||document.getElementById('em48Variants'))return;
-    const w=document.createElement('div');w.id='em48Variants';
-    w.innerHTML='<b style="display:block;margin-bottom:10px">Варианты товара</b><div id="em48list"></div><button id="em48add" class="em48add" type="button">＋ Добавить вариант</button><div style="color:#8d93a2;font-size:12px;margin-top:7px">Количество • Цена ₽ • Остаток</div>';
-    photo.parentNode.insertBefore(w,photo);
-    const list=document.getElementById('em48list'),add=document.getElementById('em48add');
-    function row(q='',p='',s='1'){
-      const x=document.createElement('div');x.className='em48row';
-      x.innerHTML='<input class="em48qty" type="number" min="1" step="1" placeholder="Количество" value="'+q+'"><input class="em48price" type="number" min="0" step="1" placeholder="Цена ₽" value="'+p+'"><input class="em48stock" type="number" min="0" step="1" placeholder="Остаток" value="'+s+'"><button class="em48del" type="button">×</button>';
-      x.querySelector('button').onclick=()=>{if(list.children.length>1)x.remove()};list.appendChild(x);
-    }
-    row(1,'','1');add.onclick=()=>row();
-    btn.type='button';
-    btn.addEventListener('click',async function(e){
-      e.preventDefault();e.stopImmediatePropagation();
-      const rows=[...document.querySelectorAll('.em48row')];
-      const options=rows.map(x=>({qty:Number(x.querySelector('.em48qty').value),price:Number(x.querySelector('.em48price').value),stock:Number(x.querySelector('.em48stock').value)})).filter(x=>x.qty>0&&x.price>=0&&x.stock>=0);
-      if(!options.length||options.length!==rows.length){alert('Заполните варианты товара');return;}
-      const name=document.getElementById('sellerProductName')?.value.trim();
-      if(!name){alert('Введите название');return;}
-      const me=typeof getMyUserRecord==='function'?await getMyUserRecord():null;
-      if(!me?.is_seller){alert('Нет прав продавца');return;}
-      const imageInput=document.getElementById('sellerProductImage');const file=imageInput?.files?.[0];
-      if(!file){alert('Добавьте фото товара');return;}
-      btn.disabled=true;btn.textContent='Публикуем…';
-      try{
-        let imageUrl=null;
-        if(typeof compressSellerImage==='function') imageUrl=await compressSellerImage(file,900,.72,550*1024);
-        else imageUrl=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(file)});
-        const description=document.getElementById('sellerProductDescription')?.value.trim()||'';
-        const details=document.getElementById('sellerProductDetails')?.value.trim()||'';
-        const icon=document.getElementById('sellerProductIcon')?.value.trim()||'📦';
-        const category=document.getElementById('sellerProductCategory')?.value||'other';
-        const first=options[0];
-        const payload={name,description,details,price:first.price,icon,category,image_url:imageUrl,seller_id:Number(me.telegram_id),seller_username:me.username?String(me.username).replace(/^@/,''):null,stock:first.stock,price_options:options.map(x=>({qty:x.qty,price:x.price,stock:x.stock})),approval_status:'pending'};
-        const {error}=await supabaseClient.from('products').insert(payload).select('*').single();
-        if(error)throw error;
-        alert('Товар отправлен на проверку 🕐');
-        ['sellerProductName','sellerProductDescription','sellerProductDetails','sellerProductPrice'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
-        const stock=document.getElementById('sellerProductStock');if(stock)stock.value='1';
-        if(imageInput)imageInput.value='';
-        const preview=document.getElementById('sellerProductImagePreview');if(preview)preview.innerHTML='';
-        if(typeof loadProducts==='function')await loadProducts();if(typeof loadSellerDashboard==='function')await loadSellerDashboard();
-      }catch(err){console.error(err);alert('Ошибка: '+(err?.message||err));}
-      finally{btn.disabled=false;btn.textContent='Опубликовать товар';}
-    },true);
-  }
-
-  function repairStoreActions(){
-    if(typeof window.loadProducts!=='function') return;
-    if(typeof window.__emOriginalOpenProductModal!=='function' && typeof window.openProductModal==='function') window.__emOriginalOpenProductModal=window.openProductModal;
-    if(typeof window.__emOriginalAddToCart!=='function' && typeof window.addToCart==='function') window.__emOriginalAddToCart=window.addToCart;
-    if(window.__emStoreRepairInstalled) return;
-    window.__emStoreRepairInstalled=true;
-    window.openProductModal=async function(productId, selectedQty){
-      try{ await window.loadProducts(); }catch(e){ console.error('PRODUCT REFRESH ERROR',e); }
-      return window.__emOriginalOpenProductModal(productId, selectedQty);
-    };
-    window.addToCart=async function(productId, qty){
-      try{ await window.loadProducts(); }catch(e){ console.error('PRODUCT REFRESH ERROR',e); }
-      return window.__emOriginalAddToCart(productId, qty);
-    };
-  }
-
-  repairStoreActions();
-  setTimeout(repairStoreActions,300);
-  setTimeout(repairStoreActions,1000);
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
-  setTimeout(install,500);setTimeout(install,1500);
-})();
-<\/script>`;
-    html=html.replace('</body>',patch+'</body>');
-    document.open();document.write(html);document.close();
-  }catch(e){document.body.innerHTML='<div style="padding:30px;color:#fff">Ошибка загрузки EasyMarket: '+String(e.message||e)+'</div>';}
-})();
+const SUPABASE_URL='https://uhmgjcoyxehknkehfbbj.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVobWdqY295eXhlaG5rZWhmYmJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMzE4OTYsImV4cCI6MjEwNDkwNzg5Nn0.JRP4sjhcPIjlrxqaHfi3t4cU0xGNx0dEQcg-HI6FGcc';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const tg=window.Telegram?.WebApp; if(tg){try{tg.ready();tg.expand();}catch(e){}}
+let products=[];let cartItems=JSON.parse(localStorage.getItem('easymarket_cart')||'[]');let activeCat='all';let selectedProduct=null;let selectedOption=null;
+const $=id=>document.getElementById(id);
+function toast(text){const old=document.querySelector('.toast');if(old)old.remove();const x=document.createElement('div');x.className='toast';x.textContent=text;$('toastRoot').appendChild(x);setTimeout(()=>x.remove(),2600)}
+function saveCart(){localStorage.setItem('easymarket_cart',JSON.stringify(cartItems))}
+function optionsFor(p){let a=Array.isArray(p.price_options)?p.price_options:[];a=a.filter(x=>Number(x.qty)>0&&Number(x.price)>=0);if(!a.length)a=[{qty:1,price:Number(p.price)||0,stock:Number(p.stock??999999)}];return a}
+function visibleProducts(){const q=$('search').value.trim().toLowerCase();return products.filter(p=>{const okCat=activeCat==='all'||p.category===activeCat;const text=(p.name+' '+(p.description||'')).toLowerCase();return okCat&&(!q||text.includes(q))})}
+function render(){const root=$('products');const list=visibleProducts();root.innerHTML='';if(!list.length){root.innerHTML='<div class="empty">Товаров не найдено</div>';return}list.forEach(p=>{const opts=optionsFor(p),first=opts[0];const c=document.createElement('div');c.className='card';c.dataset.id=p.id;const media=p.image_url?'<img class="pic" src="'+esc(p.image_url)+'" alt="">':'<div class="emoji">'+esc(p.icon||'📦')+'</div>';c.innerHTML=media+'<div class="name">'+esc(p.name)+'</div><div class="desc">'+esc(p.description||'')+'</div><div class="bottom"><div class="price">'+Number(first.price).toLocaleString('ru-RU')+' ₽</div><button class="buy" type="button">⚡ Оформить</button></div>';c.addEventListener('click',e=>{if(e.target.closest('button'))return;openProduct(p.id)});c.querySelector('.buy').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();addToCart(p.id,first.qty)});root.appendChild(c)})}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+async function loadProducts(){const {data,error}=await sb.from('products').select('*').eq('approval_status','approved').order('id',{ascending:false});if(error){console.error(error);$('products').innerHTML='<div class="empty">Не удалось загрузить товары</div>';return}products=data||[];render()}
+function openProduct(id){const p=products.find(x=>Number(x.id)===Number(id));if(!p){toast('Товар не найден');loadProducts();return}selectedProduct=p;selectedOption=optionsFor(p)[0];const opts=optionsFor(p);const media=p.image_url?'<img class="modalpic" src="'+esc(p.image_url)+'" alt="">':'<div class="modalemoji">'+esc(p.icon||'📦')+'</div>';$('productBody').innerHTML=media+'<div class="modalname">'+esc(p.name)+'</div><div class="modalprice" id="modalPrice">'+Number(selectedOption.price).toLocaleString('ru-RU')+' ₽</div>'+(opts.length>1?'<div class="label">Выберите количество</div><div class="variants" id="variants">'+opts.map((o,i)=>'<button class="variant '+(i===0?'active':'')+'" type="button" data-i="'+i+'">'+Number(o.qty)+' шт. · '+Number(o.price).toLocaleString('ru-RU')+' ₽'+(Number(o.stock)>=0?' · '+Number(o.stock)+' шт.':'')+'</button>').join('')+'</div>':'')+'<div class="label">Описание</div><div class="text">'+esc(p.description||'Описание отсутствует')+'</div>'+(p.details?'<div class="label">Детали</div><div class="text">'+esc(p.details)+'</div>':'')+'<button class="modalbuy" id="modalBuy" type="button">⚡ Оформить</button>';$('productOverlay').classList.add('open');$('modalBuy').addEventListener('click',()=>{addToCart(p.id,Number(selectedOption.qty));closeProduct()});const vs=$('variants');if(vs)vs.addEventListener('click',e=>{const b=e.target.closest('.variant');if(!b)return;vs.querySelectorAll('.variant').forEach(x=>x.classList.remove('active'));b.classList.add('active');selectedOption=opts[Number(b.dataset.i)];$('modalPrice').textContent=Number(selectedOption.price).toLocaleString('ru-RU')+' ₽'})}
+function closeProduct(){$('productOverlay').classList.remove('open')}
+function addToCart(id,qty){const p=products.find(x=>Number(x.id)===Number(id));if(!p){toast('Товар не найден');return}const opt=optionsFor(p).find(x=>Number(x.qty)===Number(qty))||optionsFor(p)[0];const stock=Number(opt.stock);if(Number.isFinite(stock)&&stock>=0&&stock<1){toast('Нет в наличии');return}const existing=cartItems.find(x=>Number(x.product_id)===Number(p.id)&&Number(x.qty)===Number(opt.qty));if(existing)existing.count=(existing.count||1)+1;else cartItems.push({product_id:p.id,name:p.name,qty:Number(opt.qty),price:Number(opt.price),count:1,seller_id:p.seller_id});saveCart();renderCart();toast('Товар добавлен в корзину 🛒')}
+function cartTotal(){return cartItems.reduce((s,x)=>s+Number(x.price)*Number(x.count||1),0)}
+function renderCart(){const root=$('cartBody');if(!cartItems.length){root.innerHTML='<div class="empty" style="padding:45px 0">Корзина пуста</div>';return}root.innerHTML=cartItems.map((x,i)=>'<div class="cartrow"><div><b>'+esc(x.name)+'</b><div class="muted">'+Number(x.qty)+' шт. × '+Number(x.count||1)+' · '+Number(x.price).toLocaleString('ru-RU')+' ₽</div></div><button class="remove" type="button" data-i="'+i+'">Удалить</button></div>').join('')+'<div class="total"><span>Итого</span><span>'+cartTotal().toLocaleString('ru-RU')+' ₽</span></div><button class="checkout" id="checkout" type="button">Оформить заказ</button>';root.querySelectorAll('.remove').forEach(b=>b.addEventListener('click',()=>{cartItems.splice(Number(b.dataset.i),1);saveCart();renderCart()}));$('checkout').addEventListener('click',checkout)}
+function openCart(){renderCart();$('cartOverlay').classList.add('open')}
+function closeCart(){$('cartOverlay').classList.remove('open')}
+async function checkout(){if(!cartItems.length){toast('Корзина пуста');return}const btn=$('checkout');btn.disabled=true;btn.textContent='Оформляем…';try{const u=tg?.initDataUnsafe?.user||{};const total=Math.round(cartTotal());const seller=String(cartItems[0].seller_id??'');const {data:order,error}=await sb.from('orders').insert({telegram_id:String(u.id||''),telegram_username:u.username?String(u.username):null,total,status:'pending',seller_id:seller,seller_status:'pending',buyer_received:false}).select('*').single();if(error)throw error;const rows=cartItems.map(x=>({order_id:order.id,product_id:x.product_id,product_name:x.name,price:Number(x.price),quantity:Number(x.qty)*Number(x.count||1),seller_id:String(x.seller_id??'')}));const {error:e2}=await sb.from('order_items').insert(rows);if(e2)throw e2;try{await fetch(SUPABASE_URL+'/functions/v1/notify-order',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ANON_KEY},body:JSON.stringify({order_id:order.id})})}catch(e){console.warn(e)}cartItems=[];saveCart();renderCart();toast('Заказ #'+order.id+' оформлен ✅');setTimeout(closeCart,700)}catch(e){console.error(e);toast('Ошибка оформления: '+(e.message||e))}finally{if($('checkout')){$('checkout').disabled=false;$('checkout').textContent='Оформить заказ'}}}
+$('productClose').addEventListener('click',closeProduct);$('cartClose').addEventListener('click',closeCart);$('cart').addEventListener('click',openCart);$('refresh').addEventListener('click',loadProducts);$('search').addEventListener('input',render);$('cats').addEventListener('click',e=>{const b=e.target.closest('.cat');if(!b)return;activeCat=b.dataset.cat;$('cats').querySelectorAll('.cat').forEach(x=>x.classList.remove('active'));b.classList.add('active');render()});$('productOverlay').addEventListener('click',e=>{if(e.target===$('productOverlay'))closeProduct()});$('cartOverlay').addEventListener('click',e=>{if(e.target===$('cartOverlay'))closeCart()});renderCart();loadProducts();
 </script>
 </body>
 </html>
