@@ -34,39 +34,20 @@ jobs:
               if(!el) return false;
               const code = el.getAttribute && el.getAttribute('onclick');
               if(!code) return false;
-
               let m;
-              if((m=code.match(/openProductModal\(\s*(\d+)/))){
-                openProductModal(Number(m[1]));
-                return true;
-              }
-              if((m=code.match(/addToCartFromModal\(\s*(\d+)\s*,\s*Number\([^)]*?([0-9]+)[^)]*\)/))){
-                addToCartFromModal(Number(m[1]), Number(m[2]));
-                return true;
-              }
-              if((m=code.match(/addToCart\(\s*(\d+)(?:\s*,\s*([0-9]+))?/))){
-                addToCart(Number(m[1]), m[2] ? Number(m[2]) : undefined);
-                return true;
-              }
-              if(/\bcheckout\s*\(\s*\)/.test(code)){
-                checkout();
-                return true;
-              }
-              if(/\bopenCart\s*\(\s*\)/.test(code)){
-                openCart();
-                return true;
-              }
+              if((m=code.match(/openProductModal\(\s*(\d+)/))){ openProductModal(Number(m[1])); return true; }
+              if((m=code.match(/addToCartFromModal\(\s*(\d+)\s*,\s*Number\([^)]*?([0-9]+)[^)]*\)/))){ addToCartFromModal(Number(m[1]), Number(m[2])); return true; }
+              if((m=code.match(/addToCart\(\s*(\d+)(?:\s*,\s*([0-9]+))?/))){ addToCart(Number(m[1]), m[2] ? Number(m[2]) : undefined); return true; }
+              if(/\bcheckout\s*\(\s*\)/.test(code)){ checkout(); return true; }
+              if(/\bopenCart\s*\(\s*\)/.test(code)){ openCart(); return true; }
               return false;
             }
-
             document.addEventListener('click', function(e){
-              let el = e.target && e.target.closest ? e.target.closest('[onclick]') : null;
+              const el = e.target && e.target.closest ? e.target.closest('[onclick]') : null;
               if(!el) return;
               const code = el.getAttribute('onclick') || '';
               if(!/(openProductModal|addToCartFromModal|addToCart|checkout|openCart)\s*\(/.test(code)) return;
-              e.preventDefault();
-              e.stopPropagation();
-              e.stopImmediatePropagation();
+              e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
               try { runExistingAction(el); } catch(err) { console.error('Telegram click fix:', err); }
             }, true);
           })();
@@ -75,7 +56,6 @@ jobs:
               src = src.replace('</body>', patch + '\n</body>', 1)
               p.write_text(src, encoding='utf-8')
 
-          # Keep the existing visual/design file and the bot-facing final file identical.
           clean = p.read_text(encoding='utf-8')
           Path('index-final.html').write_text(clean, encoding='utf-8')
           Path('index-fixed.html').write_text(clean, encoding='utf-8')
@@ -87,9 +67,4 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html index-final.html index-fixed.html
-          if git diff --cached --quiet; then
-            echo 'No changes'
-          else
-            git commit -m 'Fix Telegram product and cart clicks'
-            git push
-          fi
+          if git diff --cached --quiet; then echo 'No changes'; else git commit -m 'Fix Telegram product and cart clicks'; git push; fi
