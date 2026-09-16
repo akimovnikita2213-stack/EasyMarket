@@ -4418,7 +4418,7 @@ async function loadSellerDashboard(){
   const sales=orders.filter(o=>String(o.status||'pending').toLowerCase()==='completed'||o.buyer_received).length;
   const avg=reviews?.length?(reviews.reduce((a,r)=>a+Number(r.rating||0),0)/reviews.length).toFixed(1):"—";
   document.getElementById("sellerStats").innerHTML=`<div class="seller-stat"><b>${sales}</b><span>Продаж</span></div><div class="seller-stat"><b>${avg}</b><span>Рейтинг</span></div><div class="seller-stat"><b>${reviews?.length||0}</b><span>Отзывов</span></div>`;
-  document.getElementById("sellerOrdersList").innerHTML=orders.length?orders.slice(0,30).map(o=>{const its=(items||[]).filter(i=>i.order_id===o.id);const received=Boolean(o.buyer_received);const sellerDone=String(o.seller_status||'pending')==='completed'||Boolean(o.seller_completed_at);return `<div class="seller-card"><div class="seller-card-top"><div class="seller-card-name">Заказ #${o.id}</div><div class="seller-sub">${received?'Получен покупателем':sellerDone?'Выполнен продавцом':'В работе'}</div></div><div class="seller-card-meta">${its.map(i=>escapeHtml(i.product_name)+' × '+Number(i.quantity||1)).join('<br>')}<br>💰 ${Number(its.reduce((a,i)=>a+Number(i.price||0)*Number(i.quantity||1),0))} ₽</div><div class="order-actions"><button class="order-action-btn" onclick="openOrderChat(${Number(o.id)},'seller')">💬 Чат</button>${!sellerDone&&!received?`<button class="order-action-btn green" onclick="sellerCompleteOrder(${Number(o.id)})">✅ Заказ выполнен</button>`:''}</div></div>`}).join(''):'<div class="empty">Заказов продавца пока нет.</div>';
+  document.getElementById("sellerOrdersList").innerHTML=orders.length?orders.slice(0,30).map(o=>{const its=(items||[]).filter(i=>i.order_id===o.id);const received=Boolean(o.buyer_received);const sellerDone=String(o.seller_status||'pending')==='completed'||Boolean(o.seller_completed_at);return `<div class="seller-card"><div class="seller-card-top"><div class="seller-card-name">Заказ #${o.id}</div><div class="seller-sub">${received?'Получен покупателем':sellerDone?'Выполнен продавцом':'В работе'}</div></div><div class="seller-card-meta">${its.map(i=>escapeHtml(i.product_name)+' × '+Number(i.quantity||1)).join('<br>')}<br>💰 ${Number(its.reduce((a,i)=>a+Number(i.price||0),0))} ₽</div><div class="order-actions"><button class="order-action-btn" onclick="openOrderChat(${Number(o.id)},'seller')">💬 Чат</button>${!sellerDone&&!received?`<button class="order-action-btn green" onclick="sellerCompleteOrder(${Number(o.id)})">✅ Заказ выполнен</button>`:''}</div></div>`}).join(''):'<div class="empty">Заказов продавца пока нет.</div>';
   document.getElementById("sellerReviewsList").innerHTML=reviews?.length?reviews.slice(0,30).map(r=>`<div class="seller-card"><div class="review-stars">${'★'.repeat(Number(r.rating||0))}${'☆'.repeat(5-Number(r.rating||0))}</div><div class="seller-card-meta">${escapeHtml(r.buyer_username?'@'+r.buyer_username:'Покупатель')}</div><div class="review-text">${escapeHtml(r.text||'Без текста')}</div><div class="review-date">${formatDate(r.created_at)}</div></div>`).join(''):'<div class="empty">Отзывов пока нет.</div>';
 }
 
@@ -4668,38 +4668,10 @@ document.addEventListener("click", function(e){
 </script>
 
 
-<script id="easymarket-global-actions">
-window.openProductModal = openProductModal;
-window.closeProductModal = closeProductModal;
-window.addToCart = addToCart;
-window.addToCartFromModal = addToCartFromModal;
-window.buyNow = buyNow;
-window.openCart = openCart;
-window.closeCart = closeCart;
-window.changeCartQuantity = changeCartQuantity;
-window.removeFromCart = removeFromCart;
-window.checkout = checkout;
-window.setCategory = setCategory;
-window.renderProducts = renderProducts;
-window.selectProductQuantity = selectProductQuantity;
-</script>
 
 
-<script id="easymarket-global-actions">
-window.openProductModal = openProductModal;
-window.closeProductModal = closeProductModal;
-window.addToCart = addToCart;
-window.addToCartFromModal = addToCartFromModal;
-window.buyNow = buyNow;
-window.openCart = openCart;
-window.closeCart = closeCart;
-window.changeCartQuantity = changeCartQuantity;
-window.removeFromCart = removeFromCart;
-window.checkout = checkout;
-window.setCategory = setCategory;
-window.renderProducts = renderProducts;
-window.selectProductQuantity = selectProductQuantity;
-</script>
+
+
 
 
 <script id="easymarket-global-actions">
