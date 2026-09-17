@@ -8,13 +8,14 @@
 <script>
 (function(){
   var tg=window.Telegram&&window.Telegram.WebApp;
-  if(tg){try{tg.ready();tg.expand()}catch(e){}}
+  if(tg){try{tg.ready();tg.expand();}catch(e){}}
   var h=window.location.hash||'';
   var s=window.location.search||'';
-  var params=s?s+'&':'?';
-  window.location.replace('./index.html'+params+'telegram=1&v=20260917-directfix'+h);
+  var sep=s?'&':'?';
+  var url='./index.html'+s+sep+'telegram=1&v=20260917securefix6'+h;
+  window.location.replace(url);
 })();
 </script>
 </head>
-<body style="margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif;display:grid;place-items:center;height:100vh">Открываем EasyMarket…</body>
+<body style="margin:0;background:#0b0d12;color:#fff;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh">Открываем EasyMarket…</body>
 </html>
