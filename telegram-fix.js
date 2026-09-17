@@ -47,4 +47,19 @@
   if (document.body) {
     observer.observe(document.body, { childList: true, subtree: true });
   }
+
+  /* Load the last interaction fix after all legacy scripts. */
+  function loadInteractionFix() {
+    if (window.__emInteractionFixLoaded) return;
+    window.__emInteractionFixLoaded = true;
+    var s = document.createElement('script');
+    s.src = './final-interaction-fix.js?v=1';
+    s.async = false;
+    document.body.appendChild(s);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadInteractionFix, { once: true });
+  } else {
+    loadInteractionFix();
+  }
 })();
