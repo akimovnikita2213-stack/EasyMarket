@@ -1,5 +1,16 @@
+/* EasyMarket buyer options + global Supabase compatibility fix. */
 (function(){
   'use strict';
+
+  /* Some legacy/secure scripts use window.supabaseClient. The main page creates
+     a const supabaseClient, which is not automatically attached to window.
+     Expose the same client globally before catalog actions run. */
+  if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+    const SUPABASE_URL = 'https://uhmgjcoyxehknkehfbbj.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_7Bn4Azfm58BkIJS_6vSsUw_qbGS4wTH';
+    window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+
   var SUPABASE_URL='https://uhmgjcoyxehknkehfbbj.supabase.co';
   var SUPABASE_KEY='sb_publishable_7Bn4Azfm58BkIJS_6vSsUw_qbGS4wTH';
   var busy=false;
