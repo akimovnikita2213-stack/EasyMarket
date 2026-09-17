@@ -6,27 +6,31 @@ if(!window.supabaseClient&&window.supabase&&typeof window.supabase.createClient=
  window.supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 }
 
-/* Telegram legacy click bridge parses addToCart(...) but does not execute
-   addToCartFromModal(...). Normalize only the modal checkout button to the
-   parser-compatible form. This keeps the existing design and quantity. */
-function normalizeProductCheckoutButton(el){
- if(!el||!el.matches||!el.matches('.product-buy-now'))return;
+/* The Telegram legacy bridge is registered on document in capture phase.
+   This listener is registered on window, so it runs first. For ONLY the
+   checkout button inside the opened product modal, execute the real action
+   here and stop the legacy bridge from swallowing the click. */
+function handleModalCheckoutClick(ev){
+ if(!ev||ev.type!=='click'||!ev.target||!ev.target.closest)return;
+ var el=ev.target.closest('.product-modal .product-buy-now');
+ if(!el)return;
  var code=el.getAttribute('onclick')||'';
- var m=code.match(/addToCartFromModal\(\s*([0-9]+)\s*,\s*([0-9]+)\s*\)/);
- if(!m)return;
- el.setAttribute('onclick','addToCart(Number('+m[1]+'),Number('+m[2]+'))');
+ var m=code.match(/addToCartFromModal\(\s*([0-9]+)\s*,\s*([0-9]+)/);
+ var productId=m?Number(m[1]):NaN;
+ var qty=m?Number(m[2]):NaN;
+ if(!Number.isFinite(productId))return;
+ if(!Number.isFinite(qty)||qty<=0){
+   var active=el.closest('.product-modal')&&el.closest('.product-modal').querySelector('.quantity-option.active');
+   var qm=active&&((active.textContent||'').match(/\d+/));
+   qty=qm?Number(qm[0]):1;
+ }
+ ev.preventDefault();
+ ev.stopPropagation();
+ ev.stopImmediatePropagation();
+ try{
+   if(typeof window.addToCartFromModal==='function') window.addToCartFromModal(productId,qty);
+   else if(typeof window.addToCart==='function') window.addToCart(productId,qty);
+ }catch(err){console.error('EasyMarket modal checkout:',err);}
 }
-function scan(root){
- if(!root)return;
- if(root.nodeType===1)normalizeProductCheckoutButton(root);
- if(root.querySelectorAll)root.querySelectorAll('.product-buy-now').forEach(normalizeProductCheckoutButton);
-}
-function boot(){
- scan(document);
- var observer=new MutationObserver(function(mutations){
-  mutations.forEach(function(m){m.addedNodes&&m.addedNodes.forEach(scan);});
- });
- observer.observe(document.documentElement||document,{childList:true,subtree:true});
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+window.addEventListener('click',handleModalCheckoutClick,true);
 })();
