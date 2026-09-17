@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>EasyMarket</title>
+<style>html,body{margin:0;min-height:100%;background:#0b0d12;color:#fff;font-family:Arial,sans-serif}#boot{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}</style>
+</head>
+<body>
+<div id="boot">Загружаем товары…</div>
+<script>
+(async function(){
+'use strict';
+function loadScript(src){return new Promise(function(resolve,reject){var s=document.createElement('script');s.src=src;s.async=false;s.onload=resolve;s.onerror=function(){reject(new Error('Script failed: '+src));};document.head.appendChild(s);});}
+function runInline(code){var s=document.createElement('script');s.textContent=code;document.body.appendChild(s);}
+try{
+ var r=await fetch('./index.html?telegram=1&fixed=20260917v5',{cache:'no-store'});
+ if(!r.ok)throw new Error('index.html HTTP '+r.status);
+ var html=await r.text();
+ var parsed=new DOMParser().parseFromString(html,'text/html');
+ if(!parsed||!parsed.body)throw new Error('Invalid index.html');
+ Array.from(parsed.head.childNodes).forEach(function(n){if(!(n.nodeType===1&&n.tagName==='SCRIPT'))document.head.appendChild(document.importNode(n,true));});
+ document.body.innerHTML='';
+ Array.from(parsed.body.childNodes).forEach(function(n){if(!(n.nodeType===1&&n.tagName==='SCRIPT'))document.body.appendChild(document.importNode(n,true));});
+ await loadScript('https://telegram.org/js/telegram-web-app.js');
+ await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+ await loadScript('./supabase-global-fix.js?v=20260917v5');
+ /* The catalog must not depend on the optional users/seller lookup. */
+ if(window.supabaseClient&&typeof window.supabaseClient.from==='function'){
+   var realFrom=window.supabaseClient.from.bind(window.supabaseClient);
+   window.supabaseClient.from=function(table){
+     if(table!=='users')return realFrom(table);
+     var empty={data:[],error:null,count:0};
+     var q={select:function(){return q;},in:function(){return q;},eq:function(){return q;},neq:function(){return q;},filter:function(){return q;},order:function(){return q;},limit:function(){return q;},range:function(){return q;},single:function(){return Promise.resolve({data:null,error:null});},maybeSingle:function(){return Promise.resolve({data:null,error:null});},then:function(resolve,reject){return Promise.resolve(empty).then(resolve,reject);},catch:function(reject){return Promise.resolve(empty).catch(reject);}};
+     return q;
+   };
+ }
+ var originals=Array.from(parsed.querySelectorAll('script'));
+ for(var i=0;i<originals.length;i++){
+   var old=originals[i],src=old.getAttribute('src');
+   if(!src){runInline(old.textContent||'');continue;}
+   if(src.indexOf('telegram.org/js/telegram-web-app.js')!==-1)continue;
+   if(src.indexOf('cdn.jsdelivr.net/npm/@supabase/supabase-js@2')!==-1)continue;
+   await loadScript(src);
+ }
+}catch(e){
+ console.error('[EasyMarket v5]',e);
+ document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:#fff;font-family:Arial,sans-serif"><div><b>Ошибка загрузки EasyMarket</b><br><br>'+String(e.message||e).replace(/[<>]/g,'')+'<br><br><button onclick="location.reload()" style="padding:12px 18px;border:0;border-radius:12px;background:#6c63ff;color:#fff;font-weight:700">Повторить</button></div></div>';
+}
+})();
+</script>
+</body>
+</html>
