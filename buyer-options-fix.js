@@ -13,8 +13,34 @@ function selectedQty(modal){var active=modal&&modal.querySelector('.quantity-opt
 function render(modal,p){if(!modal||!p)return;modal.__emProductId=Number(p.id)}
 async function scan(){if(busy)return;var modal=document.querySelector('.product-modal.open .product-modal-card');if(!modal)return;if(modal.__emProductId!=null)return;var title=text(modal.querySelector('.product-modal-title'));if(!title)return;busy=true;var p=await findProduct(title);busy=false;if(p)render(modal,p)}
 function getModal(){return document.querySelector('.product-modal.open .product-modal-card')}
-/* IMPORTANT: do not replace or intercept the native modal checkout onclick. The modal is rendered by the original catalog code with onclick="addToCartFromModal(id,qty)". */
-function bindCheckout(modal){if(!modal)return;var btn=modal.querySelector('.product-buy-now');if(!btn)return;btn.__emCheckoutReady=true}
+/* Explicit event listener fallback: makes the buyer button work even when an inline onclick was overwritten/missing. */
+function bindCheckout(modal){
+ if(!modal)return;
+ var btn=modal.querySelector('.product-buy-now');
+ if(!btn||btn.__emCheckoutBound)return;
+ btn.__emCheckoutBound=true;
+ btn.addEventListener('click',async function(ev){
+   try{
+     ev.preventDefault();
+     var id=productId(modal);
+     if(id==null){
+       var title=text(modal.querySelector('.product-modal-title'));
+       var p=title&&Array.isArray(window.products)?window.products.find(function(x){return norm(x.name)===norm(title)}):null;
+       if(p){id=Number(p.id);modal.__emProductId=id}
+     }
+     var qty=selectedQty(modal);
+     if(id==null){window.showToast?.('Не удалось определить товар');return}
+     if(typeof window.addToCartFromModal==='function'){
+       await window.addToCartFromModal(Number(id),Number(qty));
+     }else if(typeof window.addToCart==='function'){
+       var ok=await window.addToCart(Number(id),Number(qty));
+       if(ok)window.closeProductModal?.();
+     }else{
+       window.showToast?.('Корзина временно недоступна');
+     }
+   }catch(e){console.error('BUY BUTTON ERROR:',e);window.showToast?.(e?.message||'Не удалось добавить товар в корзину')}
+ },true);
+}
 function bindQuantityTracking(modal){if(!modal)return;Array.prototype.forEach.call(modal.querySelectorAll('.quantity-options button'),function(btn){if(btn.__emQtyBound)return;btn.__emQtyBound=true;btn.addEventListener('click',function(){var q=getQty(btn);if(q!==null)modal.__emSelectedPriceOption={productId:productId(modal),quantity:q,price:num(btn.dataset&&btn.dataset.price)}},false)})}
 function installCardHandlers(){if(window.__emCardHandlersInstalled)return;window.__emCardHandlersInstalled=true;setInterval(function(){var m=getModal();if(m){bindCheckout(m);bindQuantityTracking(m)}},300)}
 function addSellerRow(qty,price){var box=document.getElementById('sellerPriceOptionsRows');if(!box)return;var row=document.createElement('div');row.className='em-seller-price-row';row.style.cssText='display:grid;grid-template-columns:1fr 1fr 42px;gap:8px;margin-top:8px;align-items:center';row.innerHTML='<input class="seller-price-qty" type="number" min="1" step="1" placeholder="Количество" value="'+(qty||'')+'"><input class="seller-price-value" type="number" min="0" step="1" placeholder="Общая цена ₽" value="'+(price||'')+'"><button type="button" class="seller-price-remove" style="height:44px;border:1px solid #343947;background:#1b1e27;color:#fff;border-radius:10px;font-size:18px">×</button>';row.querySelector('.seller-price-remove').onclick=function(){row.remove()};box.appendChild(row)}
