@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>EasyMarket</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+(async function(){
+  try{
+    if(window.parent && window.parent.Telegram) window.Telegram=window.parent.Telegram;
+    var r=await fetch('./index.html?source=miniapp-frame');
+    var html=await r.text();
+    html=html.replace(/<head([^>]*)>/i,'<head$1><script>try{if(parent&&parent.Telegram)window.Telegram=parent.Telegram;}catch(e){}</script>');
+    html=html.replace(/<\/head>/i,'<script src="./buyer-options-fix-v2.js?v=20260917-3"></script></head>');
+    document.open();document.write(html);document.close();
+  }catch(e){document.body.innerHTML='<p style="padding:20px;color:white;background:#0b0d12">Не удалось загрузить EasyMarket. Обнови Mini App.</p>';console.error(e)}
+})();
+</script>
+</head>
+<body style="margin:0;background:#0b0d12;color:white">Загрузка EasyMarket…</body>
+</html>
