@@ -1,4 +1,4 @@
-/* EasyMarket stable Telegram compatibility layer v20260917-5. */
+/* EasyMarket stable Telegram compatibility layer v20260917-6. */
 (function(){
 'use strict';
 var API='https://uhmgjcoyxehknkehfbbj.supabase.co/functions/v1/easymarket-api';
@@ -19,10 +19,6 @@ window.emSecureApi=async function(action,payload){
   return data;
 };
 
-/* Keep the original index.html cart implementation. buyer-price-options.js
-   replaces window.addToCart, but the original function owns the real cart
-   used by checkout(). Capture it before that replacement and restore it after
-   all external scripts have loaded. */
 var legacyAddToCart=window.addToCart;
 var legacyAddToCartFromModal=window.addToCartFromModal;
 
@@ -38,8 +34,6 @@ function install(){
     },true);
   }
 
-  /* buyer-price-options.js is loaded after this file, so repair its cart
-     bridge now that its functions exist. */
   if(typeof legacyAddToCart==='function'){
     window.emLegacyAddToCart=legacyAddToCart;
     window.addToCart=function(productId,qty){
@@ -52,10 +46,10 @@ function install(){
     };
   }
 
-  /* Product-card and product-modal CTA label. Keep the action unchanged. */
+  /* Rename the CTA without creating a MutationObserver loop. */
   function renameOrderButtons(){
     document.querySelectorAll('.product-buy-now').forEach(function(btn){
-      btn.textContent='⚡ Оформить заказ';
+      if(btn.textContent!=='⚡ Оформить заказ') btn.textContent='⚡ Оформить заказ';
     });
   }
   renameOrderButtons();
