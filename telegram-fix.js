@@ -1,4 +1,4 @@
-/* EasyMarket stable Telegram compatibility layer v20260917-6. */
+/* EasyMarket stable Telegram compatibility layer v20260917-7. */
 (function(){
 'use strict';
 var API='https://uhmgjcoyxehknkehfbbj.supabase.co/functions/v1/easymarket-api';
@@ -19,8 +19,13 @@ window.emSecureApi=async function(action,payload){
   return data;
 };
 
-var legacyAddToCart=window.addToCart;
-var legacyAddToCartFromModal=window.addToCartFromModal;
+/*
+ * IMPORTANT:
+ * buyer-price-options.js is the single owner of catalog/cart actions.
+ * Do not wrap addToCart/addToCartFromModal here: that created two cart states.
+ * Do not use MutationObserver here: changing button text from the observer
+ * caused an infinite DOM mutation loop and blocked catalog rendering.
+ */
 
 function install(){
   var modal=document.getElementById('productModal');
@@ -33,33 +38,15 @@ function install(){
       else{modal.classList.remove('open');document.body.style.overflow='';}
     },true);
   }
-
-  if(typeof legacyAddToCart==='function'){
-    window.emLegacyAddToCart=legacyAddToCart;
-    window.addToCart=function(productId,qty){
-      return legacyAddToCart(Number(productId),qty==null?1:Number(qty));
-    };
-    window.addToCartFromModal=function(productId,qty){
-      var ok=legacyAddToCart(Number(productId),qty==null?1:Number(qty));
-      if(ok && typeof window.closeProductModal==='function')window.closeProductModal();
-      return ok;
-    };
-  }
-
-  /* Rename the CTA without creating a MutationObserver loop. */
-  function renameOrderButtons(){
-    document.querySelectorAll('.product-buy-now').forEach(function(btn){
-      if(btn.textContent!=='⚡ Оформить заказ') btn.textContent='⚡ Оформить заказ';
-    });
-  }
-  renameOrderButtons();
-  if(window.MutationObserver){
-    var root=document.body;
-    if(root){
-      new MutationObserver(renameOrderButtons).observe(root,{childList:true,subtree:true});
-    }
-  }
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+
+/* CTA label only: CSS changes the visual text without touching the DOM. */
+(function(){
+  var style=document.createElement('style');
+  style.id='em-order-cta-label';
+  style.textContent='.product-buy-now{font-size:0!important}.product-buy-now::after{content:"⚡ Оформить заказ";font-size:13px;font-weight:700}';
+  (document.head||document.documentElement).appendChild(style);
 })();
