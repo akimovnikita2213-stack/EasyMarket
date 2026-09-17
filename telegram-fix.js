@@ -1,4 +1,4 @@
-/* EasyMarket stable Telegram compatibility layer v20260917-4. */
+/* EasyMarket stable Telegram compatibility layer v20260917-5. */
 (function(){
 'use strict';
 var API='https://uhmgjcoyxehknkehfbbj.supabase.co/functions/v1/easymarket-api';
@@ -50,6 +50,20 @@ function install(){
       if(ok && typeof window.closeProductModal==='function')window.closeProductModal();
       return ok;
     };
+  }
+
+  /* Product-card and product-modal CTA label. Keep the action unchanged. */
+  function renameOrderButtons(){
+    document.querySelectorAll('.product-buy-now').forEach(function(btn){
+      btn.textContent='⚡ Оформить заказ';
+    });
+  }
+  renameOrderButtons();
+  if(window.MutationObserver){
+    var root=document.body;
+    if(root){
+      new MutationObserver(renameOrderButtons).observe(root,{childList:true,subtree:true});
+    }
   }
 }
 
