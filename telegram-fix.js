@@ -1,55 +1,25 @@
-/* EasyMarket Supabase bootstrap + normal click fix v20260917-5. */
+/* EasyMarket Supabase bootstrap + normal click fix v20260918-6. */
 (function(){
 'use strict';
 var API='https://uhmgjcoyxehknkehfbbj.supabase.co/functions/v1/easymarket-api';
 var SUPABASE_URL='https://uhmgjcoyxehknkehfbbj.supabase.co';
 var SUPABASE_KEY='sb_publishable_7Bn4Azfm58BkIJS_6vSsUw_qbGS4wTH';
 function makeRestClient(){
-  function request(table,method,params,body){
-    var url=SUPABASE_URL+'/rest/v1/'+table;
-    var qs=[];Object.keys(params||{}).forEach(function(k){qs.push(encodeURIComponent(k)+'='+encodeURIComponent(params[k]));});
-    if(qs.length)url+='?'+qs.join('&');
-    return fetch(url,{method:method,headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY,'Content-Type':'application/json',Prefer:'return=representation'},body:body===undefined?undefined:JSON.stringify(body)}).then(function(r){return r.text().then(function(t){var d;try{d=t?JSON.parse(t):null;}catch(e){d=null;}return {data:r.ok?d:null,error:r.ok?null:{message:t||('HTTP '+r.status)}};});});
-  }
-  function from(table){
-    var method='GET',params={select:'*'},body,headOnly=false;
-    var q={select:function(v){params.select=v||'*';return q;},eq:function(k,v){params[k]='eq.'+v;return q;},neq:function(k,v){params[k]='neq.'+v;return q;},order:function(k,o){params.order=k+(o&&o.ascending===false?'.desc':'');return q;},limit:function(v){params.limit=v;return q;},single:function(){headOnly=true;return q;},maybeSingle:function(){headOnly=true;return q;},insert:function(v){method='POST';body=v;return q;},update:function(v){method='PATCH';body=v;return q;},delete:function(){method='DELETE';return q;},then:function(a,b){return request(table,method,params,body).then(function(r){if(headOnly&&Array.isArray(r.data))r.data=r.data[0]||null;return r;}).then(a,b);}};return q;
-  }
-  return {from:from};
+  function request(table,method,params,body){var url=SUPABASE_URL+'/rest/v1/'+table,qs=[];Object.keys(params||{}).forEach(function(k){qs.push(encodeURIComponent(k)+'='+encodeURIComponent(params[k]));});if(qs.length)url+='?'+qs.join('&');return fetch(url,{method:method,headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY,'Content-Type':'application/json',Prefer:'return=representation'},body:body===undefined?undefined:JSON.stringify(body)}).then(function(r){return r.text().then(function(t){var d;try{d=t?JSON.parse(t):null}catch(e){d=null}return{data:r.ok?d:null,error:r.ok?null:{message:t||('HTTP '+r.status)}}})})}
+  function from(table){var method='GET',params={select:'*'},body,headOnly=false;var q={select:function(v){params.select=v||'*';return q},eq:function(k,v){params[k]='eq.'+v;return q},neq:function(k,v){params[k]='neq.'+v;return q},order:function(k,o){params.order=k+(o&&o.ascending===false?'.desc':'');return q},limit:function(v){params.limit=v;return q},single:function(){headOnly=true;return q},maybeSingle:function(){headOnly=true;return q},insert:function(v){method='POST';body=v;return q},update:function(v){method='PATCH';body=v;return q},delete:function(){method='DELETE';return q},then:function(a,b){return request(table,method,params,body).then(function(r){if(headOnly&&Array.isArray(r.data))r.data=r.data[0]||null;return r}).then(a,b)}};return q}
+  return{from:from}
 }
-function ensureClient(){
-  if(window.supabaseClient&&typeof window.supabaseClient.from==='function')return true;
-  if(window.supabase&&typeof window.supabase.createClient==='function'){
-    window.supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);return true;
-  }
-  if(!window.supabaseClient)window.supabaseClient=makeRestClient();
-  return !!window.supabaseClient;
-}
+function ensureClient(){if(window.supabaseClient&&typeof window.supabaseClient.from==='function')return true;if(window.supabase&&typeof window.supabase.createClient==='function'){window.supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);return true}if(!window.supabaseClient)window.supabaseClient=makeRestClient();return!!window.supabaseClient}
 ensureClient();
-window.emSecureApi=async function(action,payload){
-  var tg=window.Telegram&&window.Telegram.WebApp;
-  var initData=tg&&tg.initData||'';
-  if(!initData)throw new Error('Откройте Mini App из Telegram');
-  var response=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:action,payload:payload||{},initData:initData})});
-  var data=await response.json().catch(function(){return null;});
-  if(!response.ok||!data||data.success===false)throw new Error(data&&data.error||'Ошибка сервера');
-  return data;
-};
-function install(){
-  ensureClient();
-  var modal=document.getElementById('productModal');
-  if(!modal||modal.dataset.emGuardInstalled==='1')return;
-  modal.dataset.emGuardInstalled='1';
-  modal.addEventListener('click',function(e){
-    if(e.target!==modal)return;
-    e.preventDefault();e.stopPropagation();
-    if(typeof window.closeProductModal==='function')window.closeProductModal();
-    else{modal.classList.remove('open');document.body.style.overflow='';}
-  },true);
-}
-function getButton(e){var t=e&&e.target;if(t&&t.nodeType===3)t=t.parentElement;return t&&t.closest?t.closest('#productModal .product-modal-actions .product-buy-now'):null;}
-function getAction(btn){var code=btn&&btn.getAttribute('onclick')||'';var m=code.match(/addToCartFromModal\(\s*(\d+)\s*,\s*(\d+(?:\.\d+)?)\s*\)/);return m?{id:Number(m[1]),qty:Number(m[2])}:null;}
-function handleClick(e){var btn=getButton(e);if(!btn)return;var action=getAction(btn);if(!action||typeof window.addToCartFromModal!=='function')return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();window.addToCartFromModal(action.id,action.qty);}
+window.emSecureApi=async function(action,payload){var tg=window.Telegram&&window.Telegram.WebApp,initData=tg&&tg.initData||'';if(!initData)throw new Error('Откройте Mini App из Telegram');var response=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:action,payload:payload||{},initData:initData})});var data=await response.json().catch(function(){return null});if(!response.ok||!data||data.success===false)throw new Error(data&&data.error||'Ошибка сервера');return data};
+function install(){ensureClient();var modal=document.getElementById('productModal');if(!modal||modal.dataset.emGuardInstalled==='1')return;modal.dataset.emGuardInstalled='1';modal.addEventListener('click',function(e){if(e.target!==modal)return;e.preventDefault();e.stopPropagation();if(typeof window.closeProductModal==='function')window.closeProductModal();else{modal.classList.remove('open');document.body.style.overflow=''}},true)}
+function getButton(e){var t=e&&e.target;if(t&&t.nodeType===3)t=t.parentElement;return t&&t.closest?t.closest('#productModal .product-modal-actions .product-buy-now'):null}
+function getAction(btn){var code=btn&&btn.getAttribute('onclick')||'',m=code.match(/addToCartFromModal\(\s*(\d+)\s*,\s*(\d+(?:\.\d+)?)\s*\)/);return m?{id:Number(m[1]),qty:Number(m[2])}:null}
+function handleClick(e){var btn=getButton(e);if(!btn)return;var action=getAction(btn);if(!action||typeof window.addToCartFromModal!=='function')return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();window.addToCartFromModal(action.id,action.qty)}
 window.addEventListener('click',handleClick,true);
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+function optionsFor(p){var o=Array.isArray(p&&p.price_options)?p.price_options:[];if(!o.length){var m=String(p&&p.details||'').match(/<!--EM_PRICES:([\s\S]*?)-->/);if(m)try{o=JSON.parse(m[1])}catch(e){}}if(!Array.isArray(o)||!o.length)o=[{qty:1,price:Number(p&&p.price||0)}];return o.map(function(x){return{qty:Number(x.qty),price:Number(x.price)}}).filter(function(x){return x.qty>0&&x.price>=0})}
+function installCardChoices(){if(typeof window.renderProducts!=='function'||window.renderProducts.__emCardChoices)return;var original=window.renderProducts;window.renderProducts=function(){var result=original.apply(this,arguments);try{document.querySelectorAll('#products .product').forEach(function(card){if(card.querySelector('.em-card-choice'))return;var name=card.querySelector('.product-name');if(!name)return;var idMatch=String(card.getAttribute('onclick')||'').match(/openProductModal\(\s*(\d+)/);if(!idMatch)return;var p=(window.products||[]).find(function(x){return Number(x.id)===Number(idMatch[1])});var opts=optionsFor(p);if(opts.length<2)return;var wrap=document.createElement('div');wrap.className='em-card-choice';wrap.style.cssText='margin:8px 0;display:flex;flex-wrap:wrap;gap:5px;';var selected=opts[0];opts.forEach(function(o,i){var b=document.createElement('button');b.type='button';b.textContent=o.qty+' шт. · '+o.price+' ₽';b.style.cssText='border:1px solid #34394a;background:'+(i===0?'#6c63ff':'#202431')+';color:#fff;border-radius:8px;padding:6px 7px;font-size:11px;font-weight:700;';b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();selected=o;wrap.querySelectorAll('button').forEach(function(x){x.style.background='#202431'});b.style.background='#6c63ff';var price=card.querySelector('.price');if(price)price.textContent=o.price+' ₽';var buy=card.querySelector('.product-buy-now');if(buy)buy.setAttribute('onclick','event.stopPropagation();addToCart('+Number(p.id)+','+Number(o.qty)+')')});wrap.appendChild(b)});var bottom=card.querySelector('.product-bottom');if(bottom)bottom.parentNode.insertBefore(wrap,bottom);});}catch(e){console.warn('EasyMarket card choices:',e)}return result};window.renderProducts.__emCardChoices=true;window.renderProducts()}
+function start(){install();installCardChoices();setTimeout(installCardChoices,300);setTimeout(installCardChoices,1000)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+setInterval(installCardChoices,1500);
 })();
