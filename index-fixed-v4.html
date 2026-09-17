@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>EasyMarket</title>
+<style>html,body{margin:0;min-height:100%;background:#0b0d12;color:#fff;font-family:Arial,sans-serif}#boot{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}</style>
+</head>
+<body>
+<div id="boot">Загружаем товары…</div>
+<script>
+(async function(){
+'use strict';
+var boot=document.getElementById('boot');
+var source='./index.html?telegram=1&fixed=20260917v4';
+function loadScript(src){return new Promise(function(resolve,reject){var s=document.createElement('script');s.src=src;s.async=false;s.onload=resolve;s.onerror=function(){reject(new Error('Script failed: '+src))};document.head.appendChild(s);});}
+function runInline(code){return new Promise(function(resolve,reject){try{var s=document.createElement('script');s.textContent=code;document.body.appendChild(s);resolve();}catch(e){reject(e);}});}
+try{
+  var r=await fetch(source,{cache:'no-store'});
+  if(!r.ok)throw new Error('index.html HTTP '+r.status);
+  var html=await r.text();
+  var parsed=new DOMParser().parseFromString(html,'text/html');
+  if(!parsed||!parsed.body)throw new Error('Invalid index.html');
+
+  // Copy the original page markup, but keep every original script inert.
+  var headNodes=Array.from(parsed.head.childNodes);
+  var bodyNodes=Array.from(parsed.body.childNodes);
+  headNodes.forEach(function(n){if(!(n.nodeType===1&&n.tagName==='SCRIPT'))document.head.appendChild(document.importNode(n,true));});
+  document.body.innerHTML='';
+  bodyNodes.forEach(function(n){if(!(n.nodeType===1&&n.tagName==='SCRIPT'))document.body.appendChild(document.importNode(n,true));});
+
+  // Critical order: Telegram SDK -> Supabase SDK -> global client -> app scripts.
+  await loadScript('https://telegram.org/js/telegram-web-app.js');
+  await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+  await loadScript('./supabase-global-fix.js?v=20260917v4');
+
+  // Execute original scripts in their original order, excluding the two SDK tags.
+  var originals=Array.from(parsed.querySelectorAll('script'));
+  for(var i=0;i<originals.length;i++){
+    var old=originals[i];
+    var src=old.getAttribute('src');
+    if(!src) { await runInline(old.textContent||''); continue; }
+    if(src.indexOf('telegram.org/js/telegram-web-app.js')!==-1) continue;
+    if(src.indexOf('cdn.jsdelivr.net/npm/@supabase/supabase-js@2')!==-1) continue;
+    await loadScript(src);
+  }
+} catch(e){
+  console.error('[EasyMarket v4]',e);
+  document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:#fff;font-family:Arial,sans-serif"><div><b>Ошибка загрузки EasyMarket</b><br><br>'+String(e.message||e).replace(/[<>]/g,'')+'<br><br><button onclick="location.reload()" style="padding:12px 18px;border:0;border-radius:12px;background:#6c63ff;color:#fff;font-weight:700">Повторить</button></div></div>';
+}
+})();
+</script>
+</body>
+</html>
