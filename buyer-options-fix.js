@@ -33,4 +33,24 @@ function handleModalCheckoutClick(ev){
  }catch(err){console.error('EasyMarket modal checkout:',err);}
 }
 window.addEventListener('click',handleModalCheckoutClick,true);
+
+/* Product-card CTA label. Keep the modal CTA unchanged. */
+function renameCardCheckoutButtons(root){
+ var scope=root&&root.querySelectorAll?root:document;
+ scope.querySelectorAll('.product-buy-now:not(.product-modal .product-buy-now)').forEach(function(btn){
+   if(btn.closest('.product-modal')) return;
+   btn.textContent='Оформить заказ';
+ });
+}
+renameCardCheckoutButtons(document);
+if(window.MutationObserver){
+ var observer=new MutationObserver(function(mutations){
+   mutations.forEach(function(m){
+     m.addedNodes&&Array.prototype.forEach.call(m.addedNodes,function(node){
+       if(node&&node.nodeType===1) renameCardCheckoutButtons(node);
+     });
+   });
+ });
+ observer.observe(document.body,{childList:true,subtree:true});
+}
 })();
