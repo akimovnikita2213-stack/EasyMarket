@@ -4,26 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>EasyMarket</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0d12}iframe{display:block;width:100%;height:100%;border:0}</style>
 </head>
 <body>
-<iframe id="emApp" src="./index.html?telegram=1&v=20260917-options2"></iframe>
+<iframe id="emApp" src="./miniapp-frame.html?v=20260917-3"></iframe>
 <script>
 (function(){
   var tg=window.Telegram&&window.Telegram.WebApp;
   if(tg){try{tg.ready();tg.expand()}catch(e){}}
-  var frame=document.getElementById('emApp');
-  frame.addEventListener('load',function(){
-    try{
-      var d=frame.contentDocument;
-      if(!d||d.getElementById('em-options-v2-loader'))return;
-      var s=d.createElement('script');
-      s.id='em-options-v2-loader';
-      s.src='./buyer-options-fix-v2.js?v=20260917-2';
-      s.async=false;
-      (d.head||d.documentElement).appendChild(s);
-    }catch(e){console.error('EasyMarket fix loader',e)}
-  });
 })();
 </script>
 </body>
