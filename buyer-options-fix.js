@@ -66,6 +66,23 @@
     var title=text(modal.querySelector('.product-modal-title'));if(!title)return;
     busy=true;var p=await findProduct(title);busy=false;if(p)render(modal,p);
   }
-  function boot(){scan();setInterval(scan,700);new MutationObserver(scan).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});}
+
+  /* Checkout bridge: the original button uses inline onclick="checkout()".
+     Explicitly expose the real function on window so Telegram/WebView and
+     inline handlers can always resolve it. */
+  function exposeCheckout(){
+    try{
+      if(typeof checkout === 'function' && window.checkout !== checkout){
+        window.checkout = checkout;
+      }
+    }catch(e){}
+  }
+
+  function boot(){
+    exposeCheckout();
+    scan();
+    setInterval(function(){exposeCheckout();scan();},700);
+    new MutationObserver(function(){exposeCheckout();scan();}).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+  }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
