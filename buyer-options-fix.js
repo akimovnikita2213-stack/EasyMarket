@@ -14,7 +14,6 @@
     return opts.map(function(x){return {qty:Number(x.qty),price:Number(x.price)}}).filter(function(x){return x.qty>0&&x.price>=0});
   }
 
-  /* ---------- Buyer quantity ---------- */
   function handleQuantityClick(e){
     var btn=e.target&&e.target.closest?e.target.closest('.quantity-option'):null;
     if(!btn)return;
@@ -26,7 +25,6 @@
     var modal=btn.closest('.product-modal');
     if(!product||!modal)return;
     e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-
     var opts=parseOptions(product);
     var chosen=opts.find(function(x){return x.qty===qty})||opts[0];
     modal.querySelectorAll('.quantity-option').forEach(function(x){x.classList.toggle('active',x===btn)});
@@ -37,7 +35,6 @@
   }
   document.addEventListener('click',handleQuantityClick,true);
 
-  /* ---------- Seller price options ---------- */
   function sellerOptionsBox(){
     var form=document.getElementById('sellerProductForm'); if(!form)return null;
     var box=document.getElementById('sellerPriceOptionsRows'); if(box)return box;
@@ -107,22 +104,39 @@
   }
 
   /* ---------- Seller panel ---------- */
+  async function hasSellerAccess(){
+    try{
+      if(typeof window.emSecureApi==='function'){
+        await window.emSecureApi('seller_dashboard',{});
+        return true;
+      }
+    }catch(err){
+      if(!String(err?.message||'').toLowerCase().includes('seller access denied')) console.error('EasyMarket seller access:',err);
+    }
+    try{
+      var rec=typeof window.getMyUserRecord==='function'?await Promise.race([window.getMyUserRecord(),new Promise(function(r){setTimeout(function(){r(null)},5000)})]):null;
+      return !!rec?.is_seller;
+    }catch(_){return false}
+  }
+
   function openSellerPanelSafe(focus){
     var panel=document.getElementById('sellerPanel');
     if(!panel)return;
     panel.classList.add('open');
     document.body.style.overflow='hidden';
     var sub=document.getElementById('sellerPanelSub');
-    if(sub)sub.textContent='Загрузка магазина...';
+    if(sub)sub.textContent='Проверяем доступ...';
     Promise.resolve().then(async function(){
       try{
-        var rec=typeof window.getMyUserRecord==='function'?await Promise.race([window.getMyUserRecord(),new Promise(function(r){setTimeout(function(){r(null)},5000)})]):null;
-        if(!rec||!rec.is_seller){
+        var allowed=await hasSellerAccess();
+        if(!allowed){
           panel.classList.remove('open');document.body.style.overflow='';
           if(typeof window.openBecomeSeller==='function')window.openBecomeSeller();
           return;
         }
-        if(sub)sub.textContent=rec.username?'@'+String(rec.username).replace(/^@/,''):'Ваш магазин';
+        var rec=null;
+        try{rec=typeof window.getMyUserRecord==='function'?await Promise.race([window.getMyUserRecord(),new Promise(function(r){setTimeout(function(){r(null)},3000)})]):null}catch(_){rec=null}
+        if(sub)sub.textContent=rec?.username?'@'+String(rec.username).replace(/^@/,''):'Ваш магазин';
         if(typeof window.loadSellerDashboard==='function'){
           try{await Promise.race([window.loadSellerDashboard(),new Promise(function(r){setTimeout(r,7000)})])}catch(err){console.error('EasyMarket seller dashboard:',err)}
         }
@@ -130,7 +144,10 @@
           var target=document.getElementById(focus==='products'?'sellerProductsTitle':'sellerOrdersTitle');
           if(target)setTimeout(function(){target.scrollIntoView({behavior:'smooth',block:'start'})},80);
         }
-      }catch(err){console.error('EasyMarket seller panel:',err);if(sub)sub.textContent='Панель продавца'}
+      }catch(err){
+        console.error('EasyMarket seller panel:',err);
+        if(sub)sub.textContent='Панель продавца';
+      }
     });
   }
   document.addEventListener('click',function(e){
@@ -148,7 +165,6 @@
     setTimeout(initSellerOptions,0);
   },true);
 
-  /* ---------- Init ---------- */
   function init(){initSellerOptions();wrapSellerSave();}
   init();
   [100,500,1200,2000,3500].forEach(function(ms){setTimeout(init,ms)});
