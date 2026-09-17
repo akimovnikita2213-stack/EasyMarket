@@ -1,4 +1,4 @@
-/* EasyMarket buyer options + global Supabase compatibility fix. */
+/* EasyMarket buyer options + seller panel compatibility fix. */
 (function(){
 'use strict';
 if(!window.supabaseClient&&window.supabase&&typeof window.supabase.createClient==='function'){
@@ -37,5 +37,54 @@ function initSellerOptions(){if(!document.getElementById('sellerProductForm'))re
 function wrapAdminProductForm(){if(typeof window.showProductForm==='function'&&!window.showProductForm.__safeWrapped){var originalShow=window.showProductForm;function safeShow(){try{originalShow.apply(this,arguments);}catch(err){console.error('EasyMarket showProductForm:',err);}var form=document.getElementById('productForm');if(form)form.style.display='block';var rows=document.getElementById('productPriceOptionsRows');if(rows&&typeof window.addPriceOptionRow==='function'&&!rows.children.length)window.addPriceOptionRow(1,'');var options=document.getElementById('productPriceOptions');if(options&&typeof window.syncPriceOptionsField==='function')window.syncPriceOptionsField();}safeShow.__safeWrapped=true;window.showProductForm=safeShow;}}
 function bindAdminAddButton(){var btn=document.querySelector('[onclick*="showProductForm"]');if(!btn||btn.__easyBound)return;btn.__easyBound=true;btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();if(typeof window.showProductForm==='function')window.showProductForm();},true);}
 function initAllRestores(){initSellerOptions();wrapAdminProductForm();bindAdminAddButton();}
-initAllRestores();setTimeout(initAllRestores,100);setTimeout(initAllRestores,500);setTimeout(initAllRestores,1200);setTimeout(initAllRestores,2000);
+
+/* Seller panel stability: open the window first, then load seller data without making
+   the button wait forever on a secondary query. */
+function sellerPanelTimeout(promise, ms){
+  return Promise.race([promise, new Promise(function(resolve){setTimeout(function(){resolve(null);},ms);})]);
+}
+function installSellerPanelFix(){
+  if(typeof window.openSellerPanel!=='function'||window.openSellerPanel.__stableWrapped)return;
+  var originalOpen=window.openSellerPanel;
+  async function stableOpenSellerPanel(focus){
+    var panel=document.getElementById('sellerPanel');
+    if(panel){panel.classList.add('open');document.body.style.overflow='hidden';}
+    try{
+      var rec=await sellerPanelTimeout(window.getMyUserRecord(),7000);
+      if(!rec||!rec.is_seller){
+        if(panel)panel.classList.remove('open');
+        document.body.style.overflow='';
+        if(typeof window.openBecomeSeller==='function')window.openBecomeSeller();
+        return;
+      }
+      var sub=document.getElementById('sellerPanelSub');
+      if(sub)sub.textContent=rec.username?'@'+String(rec.username).replace(/^@/,''):'Ваш магазин';
+      var load=window.loadSellerDashboard;
+      if(typeof load==='function'){
+        try{await sellerPanelTimeout(load(),8000);}catch(err){console.error('EasyMarket seller dashboard:',err);}
+      }
+      var targetId=focus==='products'?'sellerProductsTitle':focus==='chats'?'sellerOrdersTitle':'sellerOrdersTitle';
+      setTimeout(function(){document.getElementById(targetId)?.scrollIntoView({behavior:'smooth',block:'start'});},50);
+    }catch(err){
+      console.error('EasyMarket seller panel:',err);
+      try{showToast('Не удалось открыть панель продавца');}catch(e){}
+    }
+  }
+  stableOpenSellerPanel.__stableWrapped=true;
+  window.openSellerPanel=stableOpenSellerPanel;
+}
+function bindSellerButtons(){
+  var ids=['sellerSettingsBtn','navProductsBtn'];
+  ids.forEach(function(id){
+    var btn=document.getElementById(id);if(!btn||btn.__sellerStableBound)return;
+    btn.__sellerStableBound=true;
+    btn.addEventListener('click',function(e){
+      e.preventDefault();e.stopImmediatePropagation();
+      if(typeof window.openSellerPanel==='function')window.openSellerPanel(id==='navProductsBtn'?'products':'orders');
+    },true);
+  });
+}
+function initAll(){initAllRestores();installSellerPanelFix();bindSellerButtons();}
+initAll();
+[100,500,1200,2000,3500].forEach(function(ms){setTimeout(initAll,ms);});
 })();
