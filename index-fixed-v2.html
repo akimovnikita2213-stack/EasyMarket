@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <title>EasyMarket</title>
+  <style>html,body{margin:0;min-height:100%;background:#0b0d12;color:#fff;font-family:Arial,sans-serif}#boot{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}</style>
+</head>
+<body>
+<div id="boot">Открываем EasyMarket…</div>
+<script>
+(async function(){
+  'use strict';
+  var boot=document.getElementById('boot');
+  var source='./index.html?fixed=20260917';
+  var marker='<script src="./supabase-global-fix.js?v=20260917"><\\/script>';
+  try{
+    var r=await fetch(source,{cache:'no-store'});
+    if(!r.ok)throw new Error('index.html HTTP '+r.status);
+    var html=await r.text();
+    var sdk='<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>';
+    if(html.indexOf(marker)===-1){
+      if(html.indexOf(sdk)!==-1)html=html.replace(sdk,sdk+'\n  '+marker);
+      else html=html.replace('</head>','  '+marker+'\n</head>');
+    }
+    html=html.replace(/<meta name="easymarket-version"[^>]*>/i,'<meta name="easymarket-version" content="index-fixed-v2-20260917">');
+    document.open();document.write(html);document.close();
+  }catch(e){
+    console.error('[EasyMarket fixed loader]',e);
+    boot.innerHTML='Не удалось загрузить EasyMarket.<br><br><button onclick="location.reload()" style="padding:12px 18px;border:0;border-radius:12px;background:#6c63ff;color:#fff;font-weight:700">Повторить</button>';
+  }
+})();
+</script>
+</body>
+</html>
