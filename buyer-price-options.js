@@ -1,55 +1,24 @@
+/* EasyMarket admin bridge. Loaded after telegram-fix.js so it can safely override legacy admin handlers. */
 (function(){
   'use strict';
-  var lastId=null;
-  function get(name){try{return window[name]||globalThis[name]||null}catch(e){return null}}
-  function firstId(modal){
-    var els=modal.querySelectorAll('[onclick]');
-    for(var i=0;i<els.length;i++){
-      var s=els[i].getAttribute('onclick')||'';
-      var m=s.match(/(?:addToCartFromModal|buyNow|addToCart)\s*\(\s*(\d+)/);
-      if(m)return Number(m[1]);
-    }
-    return null;
+  const ADMIN_API='https://uhmgjcoyxehknkehfbbj.supabase.co/functions/v1/easymarket-admin-api';
+  async function admin(action,payload={}){
+    const initData=window.Telegram?.WebApp?.initData||'';
+    if(!initData)throw new Error('Откройте Mini App из Telegram');
+    const r=await fetch(ADMIN_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,payload,initData})});
+    const d=await r.json().catch(()=>null);if(!r.ok||!d?.success)throw new Error(d?.error||'Ошибка админ API');return d;
   }
-  function client(){return get('supabaseClient')||get('supabase')||null}
-  function parseOptions(p){
-    var opts=p&&p.price_options;
-    if(typeof opts==='string'){try{opts=JSON.parse(opts)}catch(e){opts=null}}
-    if(!Array.isArray(opts)||!opts.length){
-      var text=p&&p.details?String(p.details):'';
-      var m=text.match(/<!--EM_PRICES:([\s\S]*?)-->/);
-      if(m){try{opts=JSON.parse(m[1])}catch(e){opts=null}}
-    }
-    if(!Array.isArray(opts))return [];
-    return opts.map(function(o){return {qty:Number(o.qty||o.quantity),price:Number(o.price)}}).filter(function(o){return o.qty>0&&o.price>=0&&Number.isFinite(o.qty)&&Number.isFinite(o.price)})
-  }
-  function draw(modal,id,opts){
-    if(modal.querySelector('#emBuyerPriceChoicesDb'))return;
-    var price=modal.querySelector('.product-modal-price');
-    var box=document.createElement('div');box.id='emBuyerPriceChoicesDb';box.style.cssText='margin:14px 0;padding:14px;border:1px solid #3b4260;border-radius:16px;background:linear-gradient(135deg,#171b35,#21152f)';
-    box.innerHTML='<div style="font-size:15px;font-weight:800;margin-bottom:9px">🛍 Выберите количество и цену</div><div id="emDbVariantList" style="display:grid;gap:8px"></div><div id="emDbVariantInfo" style="margin-top:10px;color:#b8c2dc;font-size:13px"></div><button type="button" id="emDbBuy" style="width:100%;margin-top:11px;padding:13px;border:0;border-radius:12px;background:linear-gradient(135deg,#2563eb,#06b6d4);color:#fff;font-weight:800;font-size:15px">⚡ Купить выбранный вариант</button>';
-    (price||modal.firstElementChild).after(box);
-    var list=box.querySelector('#emDbVariantList'),info=box.querySelector('#emDbVariantInfo'),buy=box.querySelector('#emDbBuy'),selected=opts[0];
-    opts.forEach(function(o,i){
-      var b=document.createElement('button');b.type='button';b.textContent=o.qty+' шт. — '+o.price+' ₽';b.style.cssText='padding:11px;border:1px solid #465078;border-radius:11px;background:#101526;color:#fff;font-weight:700;text-align:left';
-      b.onclick=function(){selected=o;Array.from(list.children).forEach(function(x){x.style.borderColor='#465078';x.style.background='#101526'});b.style.borderColor='#22d3ee';b.style.background='#17324a';info.textContent='Выбрано: '+o.qty+' шт. за '+o.price+' ₽';window.emSelectedPriceOption={productId:id,quantity:o.qty,price:o.price};var fn=get('selectProductQuantity');if(typeof fn==='function'){try{fn(id,o.qty,o.price)}catch(e){}}};list.appendChild(b);
-      if(i===0)b.click();
-    });
-    buy.onclick=function(){
-      var fn=get('selectProductQuantity');if(typeof fn==='function'){try{fn(id,selected.qty,selected.price)}catch(e){}}
-      var add=get('addToCartFromModal');if(typeof add==='function'){try{add(id,selected.qty,selected.price);return}catch(e){}}
-      var original=modal.querySelector('.product-buy-now');if(original){original.setAttribute('onclick','addToCartFromModal('+id+','+selected.qty+','+selected.price+')');original.click()}
-    };
-  }
-  async function scan(){
-    var modal=document.querySelector('.product-modal.open .product-modal-card');if(!modal)return;
-    var id=firstId(modal);if(id==null||id===lastId&&modal.querySelector('#emBuyerPriceChoicesDb'))return;
-    var c=client();if(!c||!c.from)return;
-    try{
-      var r=await c.from('products').select('id,price,price_options,details').eq('id',id).maybeSingle();
-      var opts=parseOptions(r&&r.data);if(opts.length){lastId=id;draw(modal,id,opts)}
-    }catch(e){console.warn('buyer price options',e)}
-  }
-  function start(){setInterval(scan,500);scan()}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+  window.emAdminApi=admin;
+  const err=e=>{console.error('EasyMarket admin API:',e);window.showToast?.(e?.message||String(e));};
+
+  window.loginAdmin=async function(){try{await admin('users');window.closeLogin?.();document.getElementById('adminPanel').classList.add('open');await window.loadOrders?.();window.updateStats?.();}catch(e){err(e)}};
+  window.loadOrders=async function(){const box=document.getElementById('ordersList');if(!box)return;box.innerHTML='<div class="loading">Загрузка заказов...</div>';try{const r=await admin('orders'),orders=r.orders||[],items=r.items||[];const revenue=orders.filter(o=>String(o.status||'').toLowerCase()==='completed').reduce((a,o)=>a+Number(o.total||0),0);document.getElementById('statOrders').textContent=orders.length;document.getElementById('statRevenue').textContent=revenue+' ₽';box.innerHTML=orders.map(o=>{const its=items.filter(i=>Number(i.order_id)===Number(o.id));const done=String(o.status||'').toLowerCase()==='completed';return `<div class="order-card"><div class="order-top"><div class="order-id">Заказ #${Number(o.id)}</div><div class="order-status">${done?'Выполнено':'В ожидании'}</div></div><div class="order-info">👤 ${window.escapeHtml(o.telegram_username?'@'+o.telegram_username:'Без username')}<br>Telegram ID: ${window.escapeHtml(o.telegram_id||'—')}<br>💰 Сумма: <b>${Number(o.total||0)} ₽</b><br>📅 ${window.formatDate(o.created_at)}</div><div class="order-items-admin"><b>Товары:</b><br>${its.map(i=>'• '+window.escapeHtml(i.product_name)+' × '+Number(i.quantity||1)).join('<br>')}</div><div class="order-status-controls"><select id="status-${Number(o.id)}" class="order-status-select"><option value="pending" ${!done?'selected':''}>⏳ В ожидании</option><option value="completed" ${done?'selected':''}>✅ Выполнено</option></select><button class="status-save-btn" onclick="changeOrderStatus(${Number(o.id)})">Сохранить</button></div></div>`}).join('')||'<div class="empty">Заказов пока нет 🧾</div>'}catch(e){err(e)}};
+  window.changeOrderStatus=async function(id){try{const s=document.getElementById('status-'+id)?.value||'pending';await admin('update_order',{order_id:Number(id),status:s});window.showToast?.('Статус заказа сохранён');await window.loadOrders?.();}catch(e){err(e)}};
+  window.loadUsers=async function(){const box=document.getElementById('usersList');if(!box)return;box.innerHTML='<div class="loading">Загрузка пользователей...</div>';try{const r=await admin('users'),users=r.users||[];box.innerHTML=users.map(u=>`<div class="order-card"><div class="order-top"><div class="order-id">👤 ${window.escapeHtml([u.first_name,u.last_name].filter(Boolean).join(' ')||'Без имени')}</div><div class="order-status">${u.is_seller?'🏪 Продавец':'Покупатель'}</div></div><div class="order-info">${window.escapeHtml(u.username?'@'+u.username:'Без username')}<br>Telegram ID: ${window.escapeHtml(u.telegram_id||'—')}<br>📅 ${window.formatDate(u.created_at)}</div><div class="order-actions"><button class="order-action-btn" onclick="toggleSellerRights('${window.escapeHtml(String(u.telegram_id))}',${!Boolean(u.is_seller)})">${u.is_seller?'✓ Снять права':'🏪 Сделать продавцом'}</button></div></div>`).join('')||'<div class="empty">Пользователей пока нет</div>'}catch(e){err(e)}};
+  window.toggleSellerRights=async function(id,make){try{await admin('toggle_seller',{telegram_id:String(id),is_seller:Boolean(make)});window.showToast?.(make?'Права продавца выданы ✅':'Права продавца сняты');await window.loadUsers?.()}catch(e){err(e)}};
+  window.loadProductModeration=async function(){const box=document.getElementById('productModerationList');if(!box)return;box.innerHTML='<div class="loading">Загрузка объявлений...</div>';try{const r=await admin('moderation'),data=r.products||[];box.innerHTML=data.length?data.map(p=>`<div class="moderation-card">${p.image_url?`<img class="moderation-thumb" src="${window.escapeHtml(p.image_url)}" alt="">`:`<div class="moderation-thumb" style="display:flex;align-items:center;justify-content:center;font-size:28px;">${window.escapeHtml(p.icon||'📦')}</div>`}<div class="moderation-info"><div class="moderation-title">${window.escapeHtml(p.name)} <span class="moderation-badge pending">⏳ На проверке</span></div><div class="moderation-meta">${Number(p.price||0)} ₽ · ${window.escapeHtml(p.category||'other')}<br>Продавец: ${window.escapeHtml(p.seller_username?'@'+p.seller_username:'ID '+String(p.seller_id||'—'))}<br>${window.escapeHtml(p.description||'')}</div><div class="moderation-actions"><button class="admin-btn" onclick="approveProduct(${Number(p.id)})">✅ Одобрить</button><button class="admin-btn danger" onclick="rejectProduct(${Number(p.id)})">❌ Отклонить</button></div></div></div>`).join(''):'<div class="empty">Новых объявлений на проверке нет ✅</div>'}catch(e){err(e)}};
+  window.approveProduct=async function(id){try{await admin('update_product',{product_id:Number(id),approval_status:'approved',rejection_reason:null});window.showToast?.('Товар одобрен и опубликован ✅');await window.loadProductModeration?.();await window.loadProducts?.()}catch(e){err(e)}};
+  window.rejectProduct=async function(id){const reason=prompt('Укажите причину отклонения объявления:','Фото или описание товара не соответствует требованиям площадки.');if(reason===null)return;try{await admin('update_product',{product_id:Number(id),approval_status:'rejected',rejection_reason:String(reason).trim()});window.showToast?.('Объявление отклонено ❌');await window.loadProductModeration?.();await window.loadProducts?.()}catch(e){err(e)}};
+  window.saveProduct=async function(){try{const id=Number(document.getElementById('editProductId').value||0),name=document.getElementById('productName').value.trim(),description=document.getElementById('productDescription').value.trim(),details=document.getElementById('productDetails').value.trim(),price=Number(document.getElementById('productPrice').value),icon=document.getElementById('productIcon').value.trim()||'📦',category=document.getElementById('productCategory').value;if(!name||!Number.isFinite(price)||price<0)throw new Error('Проверьте название и цену');let image_url=id?((window.products||[]).find(p=>Number(p.id)===id)?.image_url||null):null;const file=document.getElementById('productImage')?.files?.[0];if(file){if(file.size>5*1024*1024)throw new Error('Фото должно быть до 5 МБ');image_url=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result));r.onerror=()=>rej(new Error('Не удалось прочитать фото'));r.readAsDataURL(file)});if(image_url.length>900000)throw new Error('Фото слишком большое')}if(id)await admin('update_product',{product_id:id,name,description,details,price,icon,category,image_url,approval_status:'approved'});else await admin('create_product',{name,description,details,price,icon,category,image_url});window.hideProductForm?.();window.showToast?.(id?'Товар обновлён ✅':'Товар добавлен ✅');await window.loadProducts?.()}catch(e){err(e)}};
+  window.deleteProduct=async function(id){const p=(window.products||[]).find(x=>Number(x.id)===Number(id));if(!p||!confirm('Удалить «'+p.name+'»?'))return;try{await admin('delete_product',{product_id:Number(id)});window.showToast?.('Товар удалён 🗑');await window.loadProducts?.()}catch(e){err(e)}};
 })();
