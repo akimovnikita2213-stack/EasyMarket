@@ -1,4 +1,4 @@
-/* EasyMarket Supabase bootstrap + normal click fix v20260918-6. */
+/* EasyMarket Supabase bootstrap + normal click fix v20260918-7. */
 (function(){
 'use strict';
 var API='https://uhmgjcoyxehknkehfbbj.supabase.co/functions/v1/easymarket-api';
@@ -17,9 +17,6 @@ function getButton(e){var t=e&&e.target;if(t&&t.nodeType===3)t=t.parentElement;r
 function getAction(btn){var code=btn&&btn.getAttribute('onclick')||'',m=code.match(/addToCartFromModal\(\s*(\d+)\s*,\s*(\d+(?:\.\d+)?)\s*\)/);return m?{id:Number(m[1]),qty:Number(m[2])}:null}
 function handleClick(e){var btn=getButton(e);if(!btn)return;var action=getAction(btn);if(!action||typeof window.addToCartFromModal!=='function')return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();window.addToCartFromModal(action.id,action.qty)}
 window.addEventListener('click',handleClick,true);
-function optionsFor(p){var o=Array.isArray(p&&p.price_options)?p.price_options:[];if(!o.length){var m=String(p&&p.details||'').match(/<!--EM_PRICES:([\s\S]*?)-->/);if(m)try{o=JSON.parse(m[1])}catch(e){}}if(!Array.isArray(o)||!o.length)o=[{qty:1,price:Number(p&&p.price||0)}];return o.map(function(x){return{qty:Number(x.qty),price:Number(x.price)}}).filter(function(x){return x.qty>0&&x.price>=0})}
-function installCardChoices(){if(typeof window.renderProducts!=='function'||window.renderProducts.__emCardChoices)return;var original=window.renderProducts;window.renderProducts=function(){var result=original.apply(this,arguments);try{document.querySelectorAll('#products .product').forEach(function(card){if(card.querySelector('.em-card-choice'))return;var name=card.querySelector('.product-name');if(!name)return;var idMatch=String(card.getAttribute('onclick')||'').match(/openProductModal\(\s*(\d+)/);if(!idMatch)return;var p=(window.products||[]).find(function(x){return Number(x.id)===Number(idMatch[1])});var opts=optionsFor(p);if(opts.length<2)return;var wrap=document.createElement('div');wrap.className='em-card-choice';wrap.style.cssText='margin:8px 0;display:flex;flex-wrap:wrap;gap:5px;';var selected=opts[0];opts.forEach(function(o,i){var b=document.createElement('button');b.type='button';b.textContent=o.qty+' шт. · '+o.price+' ₽';b.style.cssText='border:1px solid #34394a;background:'+(i===0?'#6c63ff':'#202431')+';color:#fff;border-radius:8px;padding:6px 7px;font-size:11px;font-weight:700;';b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();selected=o;wrap.querySelectorAll('button').forEach(function(x){x.style.background='#202431'});b.style.background='#6c63ff';var price=card.querySelector('.price');if(price)price.textContent=o.price+' ₽';var buy=card.querySelector('.product-buy-now');if(buy)buy.setAttribute('onclick','event.stopPropagation();addToCart('+Number(p.id)+','+Number(o.qty)+')')});wrap.appendChild(b)});var bottom=card.querySelector('.product-bottom');if(bottom)bottom.parentNode.insertBefore(wrap,bottom);});}catch(e){console.warn('EasyMarket card choices:',e)}return result};window.renderProducts.__emCardChoices=true;window.renderProducts()}
-function start(){install();installCardChoices();setTimeout(installCardChoices,300);setTimeout(installCardChoices,1000)}
+function start(){install()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-setInterval(installCardChoices,1500);
 })();
