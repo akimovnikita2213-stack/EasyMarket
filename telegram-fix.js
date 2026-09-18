@@ -1,4 +1,4 @@
-/* EasyMarket Supabase bootstrap + normal click fix v20260918-10. */
+/* EasyMarket Supabase bootstrap + cart state repair v20260918-11. */
 (function(){
 'use strict';
 var API='https://uhmgjcoyxehknkehfbbj.supabase.co/functions/v1/easymarket-api';
@@ -17,7 +17,15 @@ function getButton(e){var t=e&&e.target;if(t&&t.nodeType===3)t=t.parentElement;r
 function getAction(btn){var code=btn&&btn.getAttribute('onclick')||'',m=code.match(/addToCartFromModal\(\s*(\d+)\s*,\s*(\d+(?:\.\d+)?)\s*\)/);return m?{id:Number(m[1]),qty:Number(m[2])}:null}
 function handleClick(e){var btn=getButton(e);if(!btn)return;var action=getAction(btn);if(!action)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();if(typeof window.addToCartFromModal==='function')window.addToCartFromModal(action.id,action.qty);else if(typeof window.addToCart==='function')window.addToCart(action.id,action.qty)}
 window.addEventListener('click',handleClick,true);
-function start(){install()}
+var cartInitialized=false;
+function repairCart(){
+ if(typeof window.loadCart==='function'&&!cartInitialized){window.loadCart();cartInitialized=true}
+ if(typeof window.updateCart==='function')window.updateCart();
+}
+function cartClick(e){var t=e&&e.target;if(t&&t.nodeType===3)t=t.parentElement;if(!t)return;var el=t.closest&&t.closest('[onclick],button,a');if(!el)return;var code=String(el.getAttribute('onclick')||'').toLowerCase();var id=String(el.id||'').toLowerCase();var cls=String(el.className||'').toLowerCase();if(code.indexOf('cart')>=0||id.indexOf('cart')>=0||cls.indexOf('cart')>=0)setTimeout(repairCart,0)}
+window.addEventListener('click',cartClick,true);
+function start(){install();repairCart()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+setInterval(function(){install();repairCart()},1000);
 new MutationObserver(function(){install()}).observe(document.documentElement,{childList:true,subtree:true});
 })();
